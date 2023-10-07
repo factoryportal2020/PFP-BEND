@@ -21,7 +21,7 @@ class CORS
     {
         // $origin = env('REACT_REQUEST_API_URL');
         $origin = "*";
-        //dd($origin);
+        
         return $next($request)
             ->header('Access-Control-Allow-Origin', $origin)
             ->header('Access-Control-Allow-Headers', $origin)
