@@ -25,9 +25,17 @@ use Illuminate\Http\UploadedFile;
 
 Route::group(['middleware' => ['cors']], function () {
     Route::post('/customer/create', [CustomerController::class, 'create']);
+    Route::post('/customer/list', [CustomerController::class, 'list']);
+    Route::post('/customer/update', [CustomerController::class, 'update']);
+    Route::get('/customer/get/{encrypt_id}', [CustomerController::class, 'get']);
+
+    Route::get('/customer/getEncryptID/{id}', [CustomerController::class, 'getEncryptID']);
+
+    Route::post('/user/create', [UserController::class, 'create']);
+    // Route::post('/user/create', [UserController::class, 'create']);
 
     // Route::post('/customer/create', function (Request $request) {
- 
+
     //     echo "<pre>"; print_r($request->profile_image);
     // });
 });

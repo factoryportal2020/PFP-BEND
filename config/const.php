@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'customer' => 'customer/profile',
+    'customer' => 'public/customer/profile',
 ];

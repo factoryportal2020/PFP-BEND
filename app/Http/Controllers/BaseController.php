@@ -11,12 +11,16 @@ class BaseController extends Controller
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
-    protected function responseAPI($status, $message, $status_code, $time_update = null)
+    protected function responseAPI($status, $message, $status_code, $data = [], $time_update = null)
     {
         $array = ['status' => $status, 'message' => $message];
 
         if ($time_update != null) {
             $array['time_update'] = $time_update;
+        }
+
+        if ($data != null) {
+            $array['data'] = $data;
         }
 
         return response()->json($array, $status_code);

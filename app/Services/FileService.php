@@ -11,7 +11,7 @@ class FileService
             $tmp = explode('.', $file->getClientOriginalName());
             $pathFile = config('app.path_base') . DIRECTORY_SEPARATOR . $pathFolder;
             // $nameRandom = round(microtime(true) * 1000) . $index .'_'. rand(10000,99999) . '.' . end($tmp);
-            $nameRandom = round(microtime(true) * 1000) . $index . '_' . $name;
+            $nameRandom = round(microtime(true) * 1000) . $index . '_' . $name. '.' . end($tmp);
             $info = $file->move($pathFile, $nameRandom);
         }
         return $info;

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use PhpParser\Node\Stmt\Foreach_;
+use Illuminate\Validation\Rule;
+use Illuminate\Http\UploadedFile;
 
 class CustomerRequest extends FormRequest
 {
@@ -27,10 +29,24 @@ class CustomerRequest extends FormRequest
      */
     public function rules(Request $request)
     {
+        $id = ($request->encrypt_id) ? encryptID($request->encrypt_id, 'd') : null;
+
+        $email = [
+            'required', 'email',
+            ($id) ? Rule::unique('customers')->where('id', "=", $id) : 'unique:customers'
+        ];
+
+        $image_mimes = 'mimes:jpeg,png,jpg,gif,svg';
+        if ($id) {
+            if (!empty($request->profile_image) && !($request->profile_image[0] instanceof UploadedFile)) {
+                $image_mimes = [];
+            }
+        }
+
         return [
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'email' => 'required|email|unique:users|max:150',
+            'email' => $email,
             'gender' => 'required|max:25',
             'phone_no' => 'required|max:50',
             'whatsapp_no' => 'max:50',
@@ -39,7 +55,7 @@ class CustomerRequest extends FormRequest
             'city' => 'required|max:100',
             'state' => 'required|max:100',
             'notes' => 'max:1000',
-            'profile_image.*' => 'mimes:jpeg,png,jpg,gif,svg',
+            'profile_image.*' => $image_mimes,
         ];
     }
 
@@ -84,7 +100,6 @@ class CustomerRequest extends FormRequest
             response()->json($response, 200)
         );
     }
-
 }
 
 // Array

@@ -61,4 +61,14 @@ class Customer extends Model
         $code = "CUS" . $id;
         $this->attributes['code'] = $code;
     }
+
+    public function getCreatedAtAttribute($value)
+    {
+        return date("d-m-Y H:i", strtotime($value));
+    }
+
+    public function getEncrptIDAttribute($value)
+    {
+        return $encrypted = encryptID($this->id, 'e');
+    }
 }

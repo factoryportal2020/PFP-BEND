@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 // use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
@@ -20,6 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'username',
         'role_id',
         'domain_id',
         'password',
@@ -50,7 +52,7 @@ class User extends Authenticatable
         return $this->belongsTo('App\Models\Role');
     }
 
-    
+
     public function domain()
     {
         return $this->belongsTo('App\Models\Role');
@@ -59,7 +61,18 @@ class User extends Authenticatable
 
     public function getEncrptIDAttribute($value)
     {
-        return $encrypted = encryptID($this->id, 'e');
+        return encryptID($this->id, 'e');
     }
 
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = Hash::make($value);
+    }
+
+
+    public function existUser($field, $value)
+    {
+        $user = $this->where($field, '=', $value)->first();
+        return $user;
+    }
 }
