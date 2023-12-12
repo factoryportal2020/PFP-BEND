@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
-class Customer extends Model
+class Worker extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -22,6 +22,7 @@ class Customer extends Model
         'gender',
         'address',
         'state',
+        'specialist',
         'city',
         'notes',
         'status',
@@ -35,9 +36,9 @@ class Customer extends Model
     ];
 
 
-    public function customerImages() //single and multiple images
+    public function workerImages()
     {
-        return $this->hasMany('App\Models\CustomerImage');
+        return $this->hasMany('App\Models\WorkerImage');
     }
 
     public function domain()
@@ -57,9 +58,9 @@ class Customer extends Model
 
     static function getCode()
     {
-        $id = DB::table('customers')->orderBy('id', 'DESC')->value('id');
+        $id = DB::table('workers')->orderBy('id', 'DESC')->value('id');
         $id = $id + 1;
-        $code = "CUS" . $id;
+        $code = "WRK" . $id;
         return $code;
     }
 

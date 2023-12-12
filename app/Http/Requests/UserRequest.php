@@ -7,7 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
+use Illuminate\Support\Facades\DB;
 
 class UserRequest extends FormRequest
 {
@@ -30,6 +30,9 @@ class UserRequest extends FormRequest
     {
         $id = ($request->user_id) ? $request->user_id : null;
 
+        $existEmail = DB::table('users')->where('email', $request->email)->where('id', "!=", $id)->first();
+        $existPhoneNo = DB::table('users')->where('phone_no', $request->phone_no)->where('id', "!=", $id)->first();
+
         $username = [
             'required', 'max:255',
             ($id) ? Rule::unique('users')->where('id', "=", $id) : 'unique:users'
@@ -37,13 +40,23 @@ class UserRequest extends FormRequest
 
         $email = [
             'required', 'email',
-            ($id) ? Rule::unique('users')->where('id', "=", $id) : 'unique:users'
+            ($id && !$existEmail) ? Rule::unique('users')->where('id', "=", $id) : 'unique:users'
+        ];
+
+        $phone_no = [
+            'required', 'max:50',
+            ($id && !$existPhoneNo) ? Rule::unique('users')->where('id', "=", $id) : 'unique:users'
+        ];
+
+        $password = [
+            ($id) ? '' : 'required'
         ];
 
         return [
             'username' => $username,
             'email' => $email,
-            'password' => 'required',
+            'password' => $password,
+            'phone_no' => $phone_no,
         ];
     }
 
@@ -62,6 +75,8 @@ class UserRequest extends FormRequest
             'email.required' => 'Email is required',
             'email.unique' => 'Email is unique!',
             'email.max' => 'Email  no longer than 255 characters',
+            'phone_no.required' => 'phone no is required',
+            'phone_no.max' => 'phone no longer than 50 characters',
         ];
     }
 
