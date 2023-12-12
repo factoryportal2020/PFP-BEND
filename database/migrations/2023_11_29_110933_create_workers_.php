@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateCustomers extends Migration
+class CreateWorkers extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateCustomers extends Migration
      */
     public function up()
     {
-        Schema::create('customers', function (Blueprint $table) {
+        Schema::create('workers', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('user_id')->nullable();
             $table->bigInteger('admin_id');
@@ -29,6 +29,7 @@ class CreateCustomers extends Migration
             $table->string('address',1000)->nullable();
             $table->string('city',100);
             $table->string('state',100);
+            $table->string('specialist',100);
             $table->string('notes',1000)->nullable();
             $table->string('code',50);
             $table->tinyInteger('status')->default(1);
@@ -38,9 +39,9 @@ class CreateCustomers extends Migration
             $table->softDeletes();
         });
 
-        Schema::create('customer_images', function (Blueprint $table) {
+        Schema::create('worker_images', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('customer_id');
+            $table->bigInteger('worker_id');
             $table->string('name',100);
             $table->string('path',255);
             $table->bigInteger('created_by');
@@ -56,6 +57,6 @@ class CreateCustomers extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('customers');
+        Schema::dropIfExists('workers_');
     }
 }

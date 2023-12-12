@@ -7,42 +7,61 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
-class Customer extends Model
+class Item extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'first_name',
-        'last_name',
+        'name',
         'code',
-        'email',
-        'phone_no',
-        'whatsapp_no',
-        'instagram_id',
-        'gender',
-        'address',
-        'state',
-        'city',
-        'notes',
+        'description',
+        'price',
+        'category_id',
+        'status',
+
+        'specification',
+        'note',
         'status',
 
         'admin_id',
         'domain_id',
-        'user_id',
 
         'created_by',
         'updated_by',
     ];
 
 
-    public function customerImages() //single and multiple images
+    public function itemImages()
     {
-        return $this->hasMany('App\Models\CustomerImage');
+        return $this->hasMany('App\Models\ItemImage');
+    }
+
+    public function mainImages() {
+        return $this->itemImages()->where('type','=', "main");
+    }
+
+    public function otherImages() {
+        return $this->itemImages()->where('type','=', "other");
+    }
+
+    public function itemSpecifications()
+    {
+        return $this->hasMany('App\Models\ItemSpecification');
+    }
+
+    public function itemBreakdowns()
+    {
+        return $this->hasMany('App\Models\ItemBreakdown');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo('App\Models\Category');
     }
 
     public function domain()
     {
-        return $this->belongsTo('App\Models\Role');
+        return $this->belongsTo('App\Models\Domain');
     }
 
     public function admin()
@@ -57,9 +76,9 @@ class Customer extends Model
 
     static function getCode()
     {
-        $id = DB::table('customers')->orderBy('id', 'DESC')->value('id');
+        $id = DB::table('items')->orderBy('id', 'DESC')->value('id');
         $id = $id + 1;
-        $code = "CUS" . $id;
+        $code = "CAT" . $id;
         return $code;
     }
 

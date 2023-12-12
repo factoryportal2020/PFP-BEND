@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
-class CustomerRequest extends FormRequest
+class WorkerRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -32,19 +32,19 @@ class CustomerRequest extends FormRequest
     {
         $id = ($request->encrypt_id) ? encryptID($request->encrypt_id, 'd') : null;
 
-        $existEmail = DB::table('customers')->where('email', $request->email)->where('id', "!=", $id)->first();
-        $existPhoneNo = DB::table('customers')->where('phone_no', $request->phone_no)->where('id', "!=", $id)->first();
+        $existEmail = DB::table('workers')->where('email', $request->email)->where('id', "!=", $id)->first();
+        $existPhoneNo = DB::table('workers')->where('phone_no', $request->phone_no)->where('id', "!=", $id)->first();
 
         $email = [
             'required', 'email',
-            ($id && !$existEmail) ? Rule::unique('customers')->where('id', "=", $id) : 'unique:customers',
+            ($id && !$existEmail) ? Rule::unique('workers')->where('id', "=", $id) : 'unique:workers'
         ];
 
         $phone_no = [
             'required', 'max:50',
-            ($id && !$existPhoneNo) ? Rule::unique('customers')->where('id', "=", $id) : 'unique:customers'
+            ($id && !$existPhoneNo) ? Rule::unique('workers')->where('id', "=", $id) : 'unique:workers'
         ];
-        
+
         $image_mimes = 'mimes:jpeg,png,jpg,gif,svg';
         if ($id) {
             if (!empty($request->profile_image) && !($request->profile_image[0] instanceof UploadedFile)) {
@@ -67,7 +67,6 @@ class CustomerRequest extends FormRequest
             'profile_image.*' => $image_mimes,
         ];
     }
-
     /**
      * Get the error messages for the defined validation rules.
      *
@@ -110,62 +109,3 @@ class CustomerRequest extends FormRequest
         );
     }
 }
-
-// Array
-// (
-//     [profile_image] => Array
-//         (
-//             [name] => vlcsnap-2022-03-25-22h58m44s202.png
-//             [type] => image/png
-//             [tmp_name] => C:\xampp\tmp\phpB5D9.tmp
-//             [error] => 0
-//             [size] => 529439
-//         )
-
-// )
-
-
-// Array
-// (
-//     [first_name] => leo
-//     [last_name] => ram
-//     [code] => 
-//     [email] => leo@gmail.com
-//     [phone_no] => 9629188839
-//     [whatsapp_no] => 9629188839
-//     [instagram_id] => 9629188839
-//     [gender] => male
-//     [address] => 122
-//     [state] => Tamilnadu
-//     [city] => Coimbatore
-//     [notes] => 
-//     [username] => 
-//     [password] => 
-//     [status] => 1
-//     [profile_image] => Array
-//         (
-//             [0] => Illuminate\Http\UploadedFile Object
-//                 (
-//                     [test:Symfony\Component\HttpFoundation\File\UploadedFile:private] => 
-//                     [originalName:Symfony\Component\HttpFoundation\File\UploadedFile:private] => 2560x1600-843774-French-fries-Fast-food-Ketchup-Cutting-board.jpg
-//                     [mimeType:Symfony\Component\HttpFoundation\File\UploadedFile:private] => image/jpeg
-//                     [error:Symfony\Component\HttpFoundation\File\UploadedFile:private] => 0
-//                     [hashName:protected] => 
-//                     [pathName:SplFileInfo:private] => C:\xampp\tmp\phpA50E.tmp
-//                     [fileName:SplFileInfo:private] => phpA50E.tmp
-//                 )
-
-//             [1] => Illuminate\Http\UploadedFile Object
-//                 (
-//                     [test:Symfony\Component\HttpFoundation\File\UploadedFile:private] => 
-//                     [originalName:Symfony\Component\HttpFoundation\File\UploadedFile:private] => Book1.xlsx
-//                     [mimeType:Symfony\Component\HttpFoundation\File\UploadedFile:private] => application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-//                     [error:Symfony\Component\HttpFoundation\File\UploadedFile:private] => 0
-//                     [hashName:protected] => 
-//                     [pathName:SplFileInfo:private] => C:\xampp\tmp\phpA50F.tmp
-//                     [fileName:SplFileInfo:private] => phpA50F.tmp
-//                 )
-
-//         )
-
-// )

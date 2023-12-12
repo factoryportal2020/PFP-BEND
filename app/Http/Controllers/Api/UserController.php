@@ -29,6 +29,7 @@ class UserController extends BaseController
             "email" => $request->email,
             "username" => $request->username,
             "password" => $request->password,
+            "phone_no" => $request->phone_no,
             "role_id" => $request->role_id,
             "domain_id" => $request->domain_id
         ];
