@@ -56,7 +56,7 @@ class Item extends Model
 
     public function category()
     {
-        return $this->belongsTo('App\Models\Category');
+        return $this->belongsTo('App\Models\Category')->withTrashed();
     }
 
     public function domain()
@@ -78,7 +78,7 @@ class Item extends Model
     {
         $id = DB::table('items')->orderBy('id', 'DESC')->value('id');
         $id = $id + 1;
-        $code = "CAT" . $id;
+        $code = "PRODUCT" . $id;
         return $code;
     }
 

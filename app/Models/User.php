@@ -8,10 +8,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Passport\HasApiTokens;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
+use App\Models\Permission;
+use App\Notifications\ResetPasswordNotification;
+
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +31,7 @@ class User extends Authenticatable
         'role_id',
         'domain_id',
         'password',
+        'status',
     ];
 
     /**
@@ -75,5 +81,40 @@ class User extends Authenticatable
     {
         $user = $this->where($field, '=', $value)->first();
         return $user;
+    }
+
+    public function hasRole($roles)
+    {
+        $roles = explode('|', $roles);
+        foreach ($roles as $role) {
+            if ($this->role->name == $role) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function permissions()
+    {
+        $role_id = $this->role_id;
+        $result = [];
+        $permission_role = DB::table('permission_role')->where('role_id', $role_id)->pluck('permission_id');
+        if (!empty($permission_role)) {
+            $result = Permission::whereIn('id', $permission_role)->pluck('name');
+        }
+        return $result;
+    }
+
+    /**
+     * Send a password reset notification to the user.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $url = env('REACT_REQUEST_API_URL') . 'reset/password/' . $token;
+
+        $this->notify(new ResetPasswordNotification($url));
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
@@ -12,7 +12,8 @@ use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\Auth;
+use Image;
 
 class CategoryController extends BaseController
 {
@@ -21,8 +22,8 @@ class CategoryController extends BaseController
 
     public function __construct()
     {
+        $this->middleware('role:admin');
         $this->fileservice = new FileService();
-        $this->usercontroller = new UserController();
     }
 
 
@@ -91,18 +92,12 @@ class CategoryController extends BaseController
     public function create(CategoryRequest $request)
     {
         try {
-            // print_r($request->category_image);exit;
-            // return $this->responseAPI(false, $request->file(), 200);
-
-            // $user_id = Auth::user()->id;
-            $user_id = 1;
-            $domain_id = 1;
-
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'created_by' => $user_id,
-                'updated_by' => $user_id,
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'created_by' => $auth->id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
@@ -156,6 +151,11 @@ class CategoryController extends BaseController
             unset($category->categoryImages);
             
             $response['category'] = $category;
+            $response['category']['items_count'] = $category->items->count();
+            $response['category']['tasks_count'] = $category->tasks->count();
+            unset($category->items);
+            unset($category->tasks);
+            
             $response['category_image']['category_image'] = $images;
 
             return $this->responseAPI(true, "Data get successfully", 200, $response);
@@ -189,10 +189,11 @@ class CategoryController extends BaseController
             }
 
             $id = encryptID($encrypt_id, 'd');
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'updated_by' => $user_id,
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
@@ -224,6 +225,24 @@ class CategoryController extends BaseController
         }
     }
 
+    public function delete($encrypt_id){
+        try {
+            if ($encrypt_id == null || $encrypt_id == '') {
+                return $this->responseAPI(false, "Invaid Data", 200);
+            }
+            $id = encryptID($encrypt_id, 'd');
+            $delete = Category::findOrFail($id)->delete();
+            if ($delete) {
+                $message = "Category data deleted successfully";
+                return $this->responseAPI(true, $message, 200);
+            } else {
+                $message = "Something went wrong";
+                return $this->responseAPI(false, $message, 200);
+            }
+        } catch (\Exception $e) {
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
 
     public function uploadImages($category_image, $category)
     {
@@ -231,6 +250,12 @@ class CategoryController extends BaseController
             foreach ($category_image as $key => $image) {
                 if ($image instanceof UploadedFile) {
                     CategoryImage::whereIn('category_id', [$category->id])->delete();
+
+                    // $img = Image::make($image->path());
+                    // $img->resize(100, 100, function ($constraint) {
+                    //     $constraint->aspectRatio();
+                    // });
+
                     $fileUpload = $this->fileservice->upload($image, config('const.category'), $category->code);
                     $url = config('const.category') . "/" . $fileUpload->getBaseName();
                     $img_name = $image->getClientOriginalName();

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'admin' => 'public/admin/profile',
     'customer' => 'public/customer/profile',
     'worker' => 'public/worker/profile',
     'category' => 'public/category',

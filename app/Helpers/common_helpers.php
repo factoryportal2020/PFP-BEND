@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Log;
+
 function encryptID($string, $action = 'e')
 {
     // you may change these values to your own
@@ -18,4 +20,26 @@ function encryptID($string, $action = 'e')
     }
 
     return $output;
+}
+
+//createlog("customer","add","Customer",1)
+function successLog($menu, $action, $model = null, $id = null, $message = null)
+{
+    $content = $menu . "-" . $model . "-" . $action . "-" . $id;
+
+    Log::build([
+        'driver' => 'daily',
+        'path' => storage_path('logs' . env('SUCCESS_LOG_FOLDER') . env('SUCCESS_LOG_FILE_NAME'))
+    ])->info($content);
+}
+
+//createlog("customer","add","Customer",1,"something went wrong");
+function errorLog($menu, $action, $model = null, $id = null, $message = null)
+{
+    $content = $menu . "-" . $model . "-" . $action . "-" . $id . "-" . $message;
+    
+    Log::build([
+        'driver' => 'daily',
+        'path' => storage_path('logs' . env('ERROR_LOG_FOLDER') . env('ERROR_LOG_FILE_NAME'))
+    ])->error($content);
 }

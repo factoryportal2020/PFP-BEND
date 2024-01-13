@@ -19,10 +19,10 @@ class CreateItem extends Migration
             $table->bigInteger('domain_id');
             $table->string('name',100);
             $table->bigInteger('category_id');
-            $table->string('specification',100)->nullable();
+            $table->string('specification',2000)->nullable();
             $table->string('price',100)->nullable();
             $table->string('note',100)->nullable();
-            $table->string('description',1000)->nullable();
+            $table->string('description',2000)->nullable();
             $table->string('code',50);
             $table->tinyInteger('status')->default(1);
             $table->bigInteger('created_by');

@@ -33,7 +33,8 @@ class CustomerRequest extends FormRequest
         $id = ($request->encrypt_id) ? encryptID($request->encrypt_id, 'd') : null;
 
         $existEmail = DB::table('customers')->where('email', $request->email)->where('id', "!=", $id)->first();
-        $existPhoneNo = DB::table('customers')->where('phone_no', $request->phone_no)->where('id', "!=", $id)->first();
+        // $existPhoneNo = DB::table('customers')->where('phone_no', $request->phone_no)->where('id', "!=", $id)->first();
+        $existPhoneNo = DB::table('users')->where('phone_no', $request->phone_no)->where('id', "!=", $request->user_id)->first();
 
         $email = [
             'required', 'email',
@@ -42,7 +43,7 @@ class CustomerRequest extends FormRequest
 
         $phone_no = [
             'required', 'max:50',
-            ($id && !$existPhoneNo) ? Rule::unique('customers')->where('id', "=", $id) : 'unique:customers'
+            ($id && !$existPhoneNo) ? Rule::unique('users')->where('id', "=", $request->user_id) : 'unique:users'
         ];
         
         $image_mimes = 'mimes:jpeg,png,jpg,gif,svg';
@@ -81,11 +82,12 @@ class CustomerRequest extends FormRequest
             'last_name.required' => 'Last name is required',
             'last_name.max' => 'Last name no longer than 100 characters',
             'email.required' => 'Email is required',
-            'email.unique' => 'Email is unique!',
+            'email.unique' => 'Email is already registered',
             'email.max' => 'Email  no longer than 255 characters',
             'gender.required' => 'gender is required',
             'gender.max' => 'gender longer than 25 characters',
             'phone_no.required' => 'phone no is required',
+            // 'phone_no.unique' => 'phone no is unique!',
             'phone_no.max' => 'phone no longer than 50 characters',
             'whatsapp_no.max' => 'whatsapp_no longer than 50 characters',
             'instagram_id.max' => 'instagram_id longer than 100 characters',

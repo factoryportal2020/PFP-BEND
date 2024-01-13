@@ -88,17 +88,17 @@ class Task extends Model
 
     public function category()
     {
-        return $this->belongsTo('App\Models\Category');
+        return $this->belongsTo('App\Models\Category')->withTrashed();
     }
 
     public function customer()
     {
-        return $this->belongsTo('App\Models\Customer');
+        return $this->belongsTo('App\Models\Customer')->withTrashed();
     }
 
     public function worker()
     {
-        return $this->belongsTo('App\Models\Worker');
+        return $this->belongsTo('App\Models\Worker')->withTrashed();
     }
 
     public function domain()
@@ -113,7 +113,7 @@ class Task extends Model
 
     public function user()
     {
-        return $this->belongsTo('App\Models\User');
+        return $this->belongsTo('App\Models\User')->withTrashed();
     }
 
     static function getCode()
