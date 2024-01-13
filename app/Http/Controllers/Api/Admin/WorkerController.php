@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 
 use App\Http\Controllers\BaseController;
@@ -9,6 +9,8 @@ use App\Http\Requests\WorkerRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Worker;
+use App\Models\User;
+use App\Models\Role;
 use App\Models\WorkerImage;
 use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
@@ -25,6 +27,7 @@ class WorkerController extends BaseController
 
     public function __construct()
     {
+        $this->middleware('role:admin');
         $this->fileservice = new FileService();
         $this->usercontroller = new UserController();
     }
@@ -104,20 +107,14 @@ class WorkerController extends BaseController
     public function create(WorkerRequest $request)
     {
         try {
-            // print_r($request->profile_image);exit;
-            // return $this->responseAPI(false, $request->file(), 200);
 
-            // $user_id = Auth::user()->id;
-            $user_id = 1;
-            $domain_id = 1;
-            $role_id = 4;
-
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'role_id' => $role_id,
-                'created_by' => $user_id,
-                'updated_by' => $user_id,
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'role_id' => Role::worker(),
+                'created_by' => $auth->id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
@@ -146,7 +143,7 @@ class WorkerController extends BaseController
             }
 
             if (!empty($request->profile_image)) {
-                $this->uploadImages($request->profile_image, $worker);
+                $this->usercontroller->uploadWorkerImages($request->profile_image, $worker);
             }
 
             DB::commit();
@@ -163,41 +160,7 @@ class WorkerController extends BaseController
 
     public function get($encrypt_id)
     {
-        try {
-            if ($encrypt_id == null || $encrypt_id == '') {
-                return $this->responseAPI(false, "Invaid Data", 200);
-            }
-            $id = encryptID($encrypt_id, 'd');
-
-            $response = [];
-
-            $worker = Worker::findOrFail($id);
-
-            $response['user'] = [];
-            if ($worker->user_id != "" || $worker->user_id != NULL) {
-                $user = $this->usercontroller->getUser($worker->user_id);
-                if ($user->status() == 200) {
-                    $user_data = $user->getData();
-                    $response['user'] = ['username' => $user_data->username];
-                }
-            }
-
-            $images = [];
-            if (!empty($worker->workerImages)) {
-                foreach ($worker->workerImages as $key => $image) {
-                    $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
-                }
-            }
-
-            unset($worker->workerImages);
-
-            $response['worker'] = $worker;
-            $response['profile_image']['profile_image'] = $images;
-
-            return $this->responseAPI(true, "Data get successfully", 200, $response);
-        } catch (\Exception $e) {
-            return $this->responseAPI(false, $e->getMessage(), 200);
-        }
+        return $this->usercontroller->getWorker($encrypt_id);
     }
 
 
@@ -214,103 +177,32 @@ class WorkerController extends BaseController
         }
     }
 
-    public function update(WorkerRequest $request)
+    public function update(Request $request)
+    {
+        return $this->usercontroller->updateWorker($request);
+    }
+
+    public function delete($encrypt_id)
     {
         try {
-            $user_id = 1;
-            $domain_id = 1;
-            $role_id = 4;
-
-            $encrypt_id = $request->encrypt_id;
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
-
             $id = encryptID($encrypt_id, 'd');
-            $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'role_id' => $role_id,
-                'updated_by' => $user_id,
-            ]);
-
-            $data = $request->all();
-
-            DB::beginTransaction();
-
-            $worker = Worker::updateOrCreate(["id" => $id], $data);
-            // $worker->save();
-
-            $message = "Worker Datas Updated Successfully";
-
-            // User Login Creation
-            if ($request->isPasswordChange) {
-                if ($request->username != "" && $request->password != "") {
-                    $user = $this->usercontroller->createUser($request);
-                    if ($user->status() == 200) {
-                        $worker->update(['user_id' => $user->getData()->id]);
-                        $message = "Worker Datas and Login Details Saved Successfully";
-                    }
-                }
+            $worker = Worker::findOrFail($id);
+            if ($worker->user_id && $worker->user_id != null) {
+                $delete = User::findOrFail($worker->user_id)->delete();
             }
-
-            //update user Login information
-            if ($worker->user_id) {
-                $request->merge([
-                    'user_id' => $worker->user_id,
-                ]);
-                $user = $this->usercontroller->createUser($request);
-                if ($user->status() == 200) {
-                    $message = "Worker Datas and Login Details Saved Successfully";
-                }
+            $delete = $worker->delete();
+            if ($delete) {
+                $message = "Worker data deleted successfully";
+                return $this->responseAPI(true, $message, 200);
+            } else {
+                $message = "Something went wrong";
+                return $this->responseAPI(false, $message, 200);
             }
-
-            if (!empty($request->deleteImages)) {
-                WorkerImage::whereIn('id', $request->deleteImages)->delete();
-            }
-
-            if (!empty($request->profile_image)) {
-                $this->uploadImages($request->profile_image, $worker);
-            }
-
-            DB::commit();
-            return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
-            DB::rollBack();
-            if ($e instanceof HttpResponseException) {
-                return $e->getResponse();
-            }
             return $this->responseAPI(false, $e->getMessage(), 200);
-        }
-    }
-
-
-    public function uploadImages($profile_image, $worker)
-    {
-        if (!empty($profile_image)) {
-            foreach ($profile_image as $key => $image) {
-                if ($image instanceof UploadedFile) {
-                    WorkerImage::whereIn('worker_id', [$worker->id])->delete();
-                    $fileUpload = $this->fileservice->upload($image, config('const.worker'), $worker->code);
-                    $url = config('const.worker') . "/" . $fileUpload->getBaseName();
-                    $img_name = $image->getClientOriginalName();
-
-                    $data = [
-                        'worker_id' => $worker->id,
-                        'name' => $img_name,
-                        'path' => $url,
-                        'created_by' => $worker->created_by,
-                        'updated_by' => $worker->updated_by,
-                    ];
-                    $worker->workerImages()->create($data);
-                }
-                // else{
-                //     $image = json_decode($image);
-                //     $data =[
-
-                //     ]
-                // }
-            }
         }
     }
 }

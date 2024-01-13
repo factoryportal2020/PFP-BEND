@@ -21,7 +21,7 @@ class CreateTasks extends Migration
             $table->bigInteger('worker_id');
             $table->bigInteger('customer_id')->nullable();
             $table->bigInteger('category_id');
-            $table->string('specification', 100)->nullable();
+            $table->string('specification', 1000)->nullable();
             $table->string('price', 100)->nullable();
             $table->string('quantity', 100)->default(1);
             $table->string('description', 1000)->nullable();
@@ -50,9 +50,9 @@ class CreateTasks extends Migration
         Schema::create('task_specifications', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('task_id');
-            $table->string('label_name', 100);
+            $table->string('label_name', 1000);
             $table->string('type', 20)->nullable();
-            $table->string('value', 100);
+            $table->string('value', 1000);
         });
 
         Schema::create('task_breakdowns', function (Blueprint $table) {
@@ -66,7 +66,7 @@ class CreateTasks extends Migration
             $table->id();
             $table->bigInteger('task_id');
             $table->enum('status', ['Unassigned', 'Assigned', 'Inprogress', 'Holding', 'Restarted', 'Cancelled', 'Pending', 'Completed', 'Delivered']);
-            $table->string('comment', 250);
+            $table->string('comment', 500)->nullable();
             $table->bigInteger('created_by');
             $table->bigInteger('updated_by');
             $table->timestamps();

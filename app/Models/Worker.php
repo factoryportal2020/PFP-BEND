@@ -41,6 +41,11 @@ class Worker extends Model
         return $this->hasMany('App\Models\WorkerImage');
     }
 
+    public function tasks()
+    {
+        return $this->hasMany('App\Models\Task');
+    }
+
     public function domain()
     {
         return $this->belongsTo('App\Models\Role');
@@ -77,5 +82,77 @@ class Worker extends Model
     public function getEncrptIDAttribute($value)
     {
         return $encrypted = encryptID($this->id, 'e');
+    }
+
+
+
+    public function deliveredTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Delivered");
+        return $tasks; 
+    }
+    
+    public function completedTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Completed");
+        return $tasks; 
+    }
+
+    public function pendingTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Pending");
+        return $tasks; 
+    }
+
+    public function cancelledTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Cancelled");
+        return $tasks; 
+    }
+
+    public function restartedTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Restarted");
+        return $tasks; 
+    }
+    
+    public function holdingTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Holding");
+        return $tasks; 
+    }
+
+    public function inprogressTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status","Inprogress");
+        return $tasks; 
+    }
+
+    public function assignedTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Assigned");
+        return $tasks; 
+    }
+
+    public function unAssignedTasks()
+    {
+        $tasks = $this->tasks()->where("tasks.status", "Unassigned");
+        return $tasks; 
+    }
+
+    // 'Unassigned','Assigned','Inprogress','Holding','Restarted','Cancelled','Pending','Completed','Delivered'
+
+    public function getAllTasksCountAttribute()
+    {
+        $tasks['unassigned_count'] = $this->unAssignedTasks()->count();
+        $tasks['assigned_count'] = $this->assignedTasks()->count();
+        $tasks['inprogress_count'] = $this->inprogressTasks()->count();
+        $tasks['holding_count'] = $this->holdingTasks()->count();
+        $tasks['restarted_count'] = $this->restartedTasks()->count();
+        $tasks['cancelled_count'] = $this->cancelledTasks()->count();
+        $tasks['pending_count'] = $this->pendingTasks()->count();
+        $tasks['completed_count'] = $this->completedTasks()->count();
+        $tasks['delivered_count'] = $this->deliveredTasks()->count();
+        return $tasks; 
     }
 }

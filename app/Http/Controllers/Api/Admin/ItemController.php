@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
@@ -15,6 +15,8 @@ use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+
 
 class ItemController extends BaseController
 {
@@ -24,8 +26,8 @@ class ItemController extends BaseController
 
     public function __construct()
     {
+        $this->middleware('role:admin');
         $this->fileservice = new FileService();
-        $this->usercontroller = new UserController();
     }
 
 
@@ -103,22 +105,15 @@ class ItemController extends BaseController
     public function create(ItemRequest $request)
     {
         try {
-            // print_r($request->item_image);exit;
-            // return $this->responseAPI(false, $request->file(), 200);
-
-            // $user_id = Auth::user()->id;
-            $user_id = 1;
-            $domain_id = 1;
-
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'created_by' => $user_id,
-                'updated_by' => $user_id,
-            ]);
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'created_by' => $auth->id,
+                'updated_by' => $auth->id,
+            ]); 
 
             $data = $request->all();
-
 
             DB::beginTransaction();
 
@@ -184,6 +179,7 @@ class ItemController extends BaseController
             unset($item->itemImages);
 
             $response['item'] = $item;
+            $response['item']['category_name'] = $item->category->name;
             $response['other_specifications'] = $item->itemSpecifications;
             $response['price_breakdowns'] = $item->itemBreakdowns;
             $response['item_image']['item_image'] = $mainImages;
@@ -216,18 +212,18 @@ class ItemController extends BaseController
     public function update(ItemRequest $request)
     {
         try {
-            $user_id = 1;
-            $domain_id = 1;
             $encrypt_id = $request->encrypt_id;
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
 
             $id = encryptID($encrypt_id, 'd');
+            
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'updated_by' => $user_id,
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
@@ -262,6 +258,26 @@ class ItemController extends BaseController
             if ($e instanceof HttpResponseException) {
                 return $e->getResponse();
             }
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+    public function delete($encrypt_id)
+    {
+        try {
+            if ($encrypt_id == null || $encrypt_id == '') {
+                return $this->responseAPI(false, "Invaid Data", 200);
+            }
+            $id = encryptID($encrypt_id, 'd');
+            $delete = Item::findOrFail($id)->delete();
+            if ($delete) {
+                $message = "Item data deleted successfully";
+                return $this->responseAPI(true, $message, 200);
+            } else {
+                $message = "Something went wrong";
+                return $this->responseAPI(false, $message, 200);
+            }
+        } catch (\Exception $e) {
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -334,9 +350,14 @@ class ItemController extends BaseController
         }
     }
 
-    public function getCategoryList()
+    public function getCategoryList($selectCondition)
     {
-        $datas = DB::table('categories')->selectRaw('id as value, name as label')->get();
+        $datas = DB::table('categories')->selectRaw('id as value, name as label')
+            ->when(($selectCondition == "wt"), function ($query) {
+                $query->where('deleted_at', null)
+                    ->where('status', 1);
+            })
+            ->get();
         return $this->responseAPI(true, "Category get successfully", 200, $datas);
     }
 }

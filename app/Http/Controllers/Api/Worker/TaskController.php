@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Worker;
 
 use App\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
-use App\Http\Requests\TaskRequest;
+use App\Http\Requests\Worker\TaskRequest;
 use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use App\Models\Task;
@@ -16,6 +16,8 @@ use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Worker;
 
 class TaskController extends BaseController
 {
@@ -25,18 +27,18 @@ class TaskController extends BaseController
 
     public function __construct()
     {
+        $this->middleware('role:worker');
         $this->fileservice = new FileService();
-        $this->usercontroller = new UserController();
     }
 
 
     public function list(Request $request)
     {
         try {
+            $auth = Auth::user();
+            $worker = Worker::where('user_id', $auth->id)->first();
             $search_word = $request->search_word;
             $category_id = $request->category_id;
-            $customer_id = $request->customer_id;
-            $worker_id = $request->worker_id;
             $status = $request->status;
 
             $limit = $request->taskPerPage;
@@ -89,21 +91,17 @@ class TaskController extends BaseController
                 ->when($category_id, function ($query, $category_id) {
                     $query->where("categories.id", $category_id);
                 })
-                ->when($customer_id, function ($query, $customer_id) {
-                    $query->where("customers.id", $customer_id);
-                })
                 ->when($status, function ($query, $status) {
                     $query->where("tasks.status", $status);
                 })
-                ->when($worker_id, function ($query, $worker_id) {
-                    $query->where("workers.id", $worker_id);
+                ->when(($start_date), function ($query, $start_date) {
+                    $query->where("tasks.start_date", ">=", $start_date);
                 })
-                ->when($start_date, function ($query, $start_date) {
-                    $query->whereDate("tasks.start_date", ">=", $start_date);
+                ->when(($end_date), function ($query, $end_date) {
+                    $query->where("tasks.end_date", "<=", $end_date);
                 })
-                ->when($end_date, function ($query, $end_date) {
-                    $query->whereDate("tasks.end_date", "<=", $end_date);
-                });
+                ->where('tasks.worker_id', $worker->id)
+                ->where('workers.admin_id', $worker->admin_id);
 
 
             $totalCount = $datas->count();
@@ -124,20 +122,13 @@ class TaskController extends BaseController
                         'name' => $task->image_name
                     ];
 
-                    $worker_image_url = ($task->worker_image_path != "" || $task->worker_image_path != null) ? env('APP_URL') . Storage::url($task->worker_image_path) : "";
-                    $task['worker_image'] = [
-                        'url' => $worker_image_url,
-                        'name' => $task->worker_image_name
-                    ];
+                    $task['worker_image'] = [];
 
-                    $customer_image_url = ($task->customer_image_path != "" || $task->customer_image_path != null) ? env('APP_URL') . Storage::url($task->customer_image_path) : "";
-                    $task['customer_image'] = [
-                        'url' => $customer_image_url,
-                        'name' => $task->customer_image_name
-                    ];
+                    $task['customer_image'] = [];
 
 
                     $task->encrypt_id = encryptID($task->id, 'e');
+
                     unset($task->image_path);
                     unset($task->image_name);
 
@@ -152,74 +143,8 @@ class TaskController extends BaseController
             $response['data'] = $tasks;
             $response['totalCount'] = $totalCount;
 
-
-            return $this->responseAPI(true, "Data get successfully", 200, $response);
+            return $this->responseAPI(true, $end_date, 200, $response);
         } catch (\Exception $e) {
-            return $this->responseAPI(false, $e->getMessage(), 200);
-        }
-    }
-
-
-    public function create(TaskRequest $request)
-    {
-        try {
-
-            // $user_id = Auth::user()->id;
-            $user_id = 1;
-            $domain_id = 1;
-
-            $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'created_by' => $user_id,
-                'updated_by' => $user_id,
-            ]);
-
-            $data = $request->all();
-
-
-            DB::beginTransaction();
-
-            $data['code'] = Task::getCode();
-
-            $task = Task::create($data);
-            $task->save();
-
-            $message = "Task Datas Saved Successfully";
-
-
-            if (!empty($request->task_image)) {
-                $this->uploadImages($request->task_image, $task);
-            }
-
-            if (!empty($request->initial_image)) {
-                $this->uploadImages($request->initial_image, $task, "initial");
-            }
-
-            if (!empty($request->working_image)) {
-                $this->uploadImages($request->working_image, $task, "working");
-            }
-
-            if (!empty($request->completed_image)) {
-                $this->uploadImages($request->completed_image, $task, "completed");
-            }
-
-            if (!empty($request->delivered_image)) {
-                $this->uploadImages($request->delivered_image, $task, "delivered");
-            }
-
-            $this->updateSpecifications($request->other_specifications, $request->delete_specifications_ids, $task->id);
-
-            $this->updatePricebreakdowns($request->price_breakdowns, $request->delete_pricebreakdowns_ids, $task->id);
-
-
-            DB::commit();
-            return $this->responseAPI(true, $message, 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            if ($e instanceof HttpResponseException) {
-                return $e->getResponse();
-            }
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -234,8 +159,9 @@ class TaskController extends BaseController
             $id = encryptID($encrypt_id, 'd');
 
             $response = [];
-
+            $user_id = Auth::user()->id;
             $task = Task::findOrFail($id);
+            $task->category_name = $task->category->name;
 
             $mainImages = [];
             if (!empty($task->mainImages)) {
@@ -272,23 +198,60 @@ class TaskController extends BaseController
                 }
             }
 
+            $customerImages = [];
+            if (!empty($task->customer->customerImages)) {
+                foreach ($task->customer->customerImages as $key => $image) {
+                    $customerImages[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                }
+                $task->customer->customer_image = $customerImages;
+                unset($task->customer->customerImages);
+            }
+
+            $workerImages = [];
+            if (!empty($task->worker->workerImages)) {
+                foreach ($task->worker->workerImages as $key => $image) {
+                    $workerImages[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                }
+
+                $task->worker->worker_image = $workerImages;
+                unset($task->worker->workerImages);
+            }
+
             unset($task->taskImages);
             unset($task->initialImages);
             unset($task->workingImages);
             unset($task->completedImages);
             unset($task->deliveredImages);
 
+            $taskHistories = [];
+            if (!empty($task->taskHistories)) {
+                foreach ($task->taskHistories as $key => $history) {
+                    $user_name = ($history->user) ? $history->user->name : $history->updated_by;
+                    $history->updated_by = ($history->updated_by == $user_id) ?
+                        "You" : $user_name;
+                    unset($history->user);
+                    $taskHistories[] = $history;
+                }
+            }
+
+
             $response['task'] = $task;
             $response['other_specifications'] = $task->taskSpecifications;
             $response['price_breakdowns'] = $task->taskBreakdowns;
+            $response['task_histories'] = $taskHistories;
             $response['task_image']['task_image'] = $mainImages;
             $response['initial_image']['initial_image'] = $initialImages;
             $response['working_image']['working_image'] = $workingImages;
             $response['completed_image']['completed_image'] = $completedImages;
             $response['delivered_image']['delivered_image'] = $deliveredImages;
 
+            // $response['customer_image']['customer_image'] = $customerImages;
+            // $response['worker_image']['worker_image'] = $workerImages;
+
+
             unset($task->taskSpecifications);
             unset($task->taskBreakdowns);
+            unset($task->taskHistories);
 
 
             return $this->responseAPI(true, "Data get successfully", 200, $response);
@@ -314,39 +277,30 @@ class TaskController extends BaseController
     public function update(TaskRequest $request)
     {
         try {
-            $user_id = 1;
-            $domain_id = 1;
             $encrypt_id = $request->encrypt_id;
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
 
             $id = encryptID($encrypt_id, 'd');
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'updated_by' => $user_id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
 
             DB::beginTransaction();
 
-            $task = Task::updateOrCreate(["id" => $id], $data);
+            $current_status = Task::findOrFail($id)->value('status');
+
+            $task = Task::findOrFail($id);
             // $task->save();
 
             $message = "Task Datas Updated Successfully";
 
             if (!empty($request->deleteImages)) {
                 TaskImage::whereIn('id', $request->deleteImages)->delete();
-            }
-
-            if (!empty($request->task_image)) {
-                $this->uploadImages($request->task_image, $task);
-            }
-
-            if (!empty($request->initial_image)) {
-                $this->uploadImages($request->initial_image, $task, "initial");
             }
 
             if (!empty($request->working_image)) {
@@ -357,13 +311,7 @@ class TaskController extends BaseController
                 $this->uploadImages($request->completed_image, $task, "completed");
             }
 
-            if (!empty($request->delivered_image)) {
-                $this->uploadImages($request->delivered_image, $task, "delivered");
-            }
-
-            $this->updateSpecifications($request->other_specifications, $request->delete_specifications_ids, $task->id);
-
-            $this->updatePricebreakdowns($request->price_breakdowns, $request->delete_pricebreakdowns_ids, $task->id);
+            $this->updateTaskHistory($task->id, $request->comment, $request->status, $current_status);
 
             DB::commit();
             return $this->responseAPI(true, $message, 200);
@@ -373,47 +321,6 @@ class TaskController extends BaseController
                 return $e->getResponse();
             }
             return $this->responseAPI(false, $e->getMessage(), 200);
-        }
-    }
-
-    public function updateSpecifications($specifications, $deleteIds, $task_id)
-    {
-        if (!empty($deleteIds)) {
-            TaskSpecification::whereIn('id', [$deleteIds])->delete();
-        }
-        if (!empty($specifications)) {
-            foreach ($specifications as $key => $spec) {
-                if ($spec['label_name'] == null || $spec['value'] == null) {
-                    continue;
-                }
-                $data = [
-                    'task_id' => $task_id,
-                    'label_name' => $spec['label_name'],
-                    'type' => "text",
-                    'value' => $spec['value'],
-                ];
-                TaskSpecification::updateOrCreate(['id' => $spec['id']], $data);
-            }
-        }
-    }
-
-    public function updatePricebreakdowns($breakdowns, $deleteIds, $task_id)
-    {
-        if (!empty($deleteIds)) {
-            TaskBreakdown::whereIn('id', [$deleteIds])->delete();
-        }
-        if (!empty($breakdowns)) {
-            foreach ($breakdowns as $key => $break) {
-                if ($break['label_name'] == null || $break['value'] == null) {
-                    continue;
-                }
-                $data = [
-                    'task_id' => $task_id,
-                    'label_name' => $break['label_name'],
-                    'value' => $break['value'],
-                ];
-                TaskBreakdown::updateOrCreate(['id' => $break['id']], $data);
-            }
         }
     }
 
@@ -445,23 +352,61 @@ class TaskController extends BaseController
         }
     }
 
-    public function getCategoryList()
+    public function updateTaskHistory($task_id, $comment, $request_status, $current_status = null)
     {
-        $datas = DB::table('categories')->selectRaw('id as value, name as label')->get();
+        $user_id = Auth::user()->id;
+        $data = [
+            'task_id' => $task_id,
+            'created_by' => $user_id,
+            'updated_by' => $user_id,
+            'status' => $request_status,
+            'comment' => $comment,
+        ];
+        if ($request_status != $current_status) {
+            TaskHistory::create($data);
+        }
+    }
+
+    public function taskStatusUpdate(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+
+            $task_id = encryptID($request->encrypt_id, 'd');
+
+            $request_status = $request->status;
+            $comment = $request->comment;
+
+            if (!in_array($request_status, ["Assigned", "Inprogress", "Holding", "Restarted", "Completed"])) {
+                $message = "Status not updated";
+                return $this->responseAPI(false, $message, 200);
+            }
+
+            $task = Task::findOrFail($task_id);
+            $current_status = $task->status;
+            $task->update(['status' => $request_status]);
+
+            $this->updateTaskHistory($task_id, $comment, $request_status, $current_status);
+            $message = "Status updated successfully";
+            DB::commit();
+            return $this->responseAPI(true, $message, 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            if ($e instanceof HttpResponseException) {
+                return $e->getResponse();
+            }
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+    public function getCategoryList($selectCondition)
+    {
+        $datas = DB::table('categories')->selectRaw('id as value, name as label')
+            ->when(($selectCondition == "wt"), function ($query, $encrypt_id) {
+                $query->where('deleted_at', null)
+                    ->where('status', 1);
+            })
+            ->get();
         return $this->responseAPI(true, "Category get successfully", 200, $datas);
-    }
-
-    public function getCustomerList()
-    {
-        $datas = DB::table('customers')->selectRaw('id as value, 
-        CONCAT(`first_name`," ",`last_name`, " - ", `phone_no`) as label')->get();
-        return $this->responseAPI(true, "Customer get successfully", 200, $datas);
-    }
-
-    public function getWorkerList()
-    {
-        $datas = DB::table('workers')->selectRaw('id as value,
-        CONCAT(`first_name`," ",`last_name`,  " - ",`specialist`," - ", `phone_no`) as label')->get();
-        return $this->responseAPI(true, "Worker get successfully", 200, $datas);
     }
 }

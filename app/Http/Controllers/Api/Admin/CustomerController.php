@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
@@ -8,6 +8,8 @@ use App\Http\Requests\CustomerRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Customer;
+use App\Models\User;
+use App\Models\Role;
 use App\Models\CustomerImage;
 use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
@@ -26,6 +28,7 @@ class CustomerController extends BaseController
 
     public function __construct()
     {
+        $this->middleware('role:admin');
         $this->fileservice = new FileService();
         $this->usercontroller = new UserController();
     }
@@ -100,19 +103,14 @@ class CustomerController extends BaseController
     public function create(CustomerRequest $request)
     {
         try {
-            // print_r($request->profile_image);exit;
-            // return $this->responseAPI(false, $request->file(), 200);
 
-            // $user_id = Auth::user()->id;
-            $user_id = 1;
-            $domain_id = 1;
-
+            $auth = Auth::user();
             $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'role_id' => $user_id,
-                'created_by' => $user_id,
-                'updated_by' => $user_id,
+                'domain_id' => $auth->domain_id,
+                'admin_id' => $auth->id,
+                'role_id' => Role::customer(),
+                'created_by' => $auth->id,
+                'updated_by' => $auth->id,
             ]);
 
             $data = $request->all();
@@ -140,7 +138,7 @@ class CustomerController extends BaseController
             }
 
             if (!empty($request->profile_image)) {
-                $this->uploadImages($request->profile_image, $customer);
+                $this->usercontroller->uploadCustomerImages($request->profile_image, $customer);
             }
 
             DB::commit();
@@ -154,46 +152,15 @@ class CustomerController extends BaseController
         }
     }
 
-
     public function get($encrypt_id)
     {
-        try {
-            if ($encrypt_id == null || $encrypt_id == '') {
-                return $this->responseAPI(false, "Invaid Data", 200);
-            }
-            $id = encryptID($encrypt_id, 'd');
-
-            $response = [];
-
-            $customer = Customer::findOrFail($id);
-
-            $response['user'] = [];
-            if ($customer->user_id != "" || $customer->user_id != NULL) {
-                $user = $this->usercontroller->getUser($customer->user_id);
-                if ($user->status() == 200) {
-                    $user_data = $user->getData();
-                    $response['user'] = ['username' => $user_data->username];
-                }
-            }
-
-            $images = [];
-            if (!empty($customer->customerImages)) {
-                foreach ($customer->customerImages as $key => $image) {
-                    $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
-                }
-            }
-
-            unset($customer->customerImages);
-
-            $response['customer'] = $customer;
-            $response['profile_image']['profile_image'] = $images;
-
-            return $this->responseAPI(true, "Data get successfully", 200, $response);
-        } catch (\Exception $e) {
-            return $this->responseAPI(false, $e->getMessage(), 200);
-        }
+        return $this->usercontroller->getCustomer($encrypt_id);
     }
 
+    public function update(Request $request)
+    {
+        return $this->usercontroller->updateCustomer($request);
+    }
 
     public function getEncryptID($id)
     {
@@ -208,104 +175,29 @@ class CustomerController extends BaseController
         }
     }
 
-    public function update(CustomerRequest $request)
+    public function delete($encrypt_id)
     {
         try {
-            $user_id = 1;
-            $domain_id = 1;
-            $encrypt_id = $request->encrypt_id;
-
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
-
-
-
             $id = encryptID($encrypt_id, 'd');
-            $request->merge([
-                'domain_id' => $domain_id,
-                'admin_id' => $user_id,
-                'role_id' => $user_id,
-                'updated_by' => $user_id,
-            ]);
-
-            $data = $request->all();
-
-            DB::beginTransaction();
-
-            $customer = Customer::updateOrCreate(["id" => $id], $data);
-            // $customer->save();
-
-            $message = "Customer Datas Updated Successfully";
-
-            // User Login Creation
-            if ($request->isPasswordChange) {
-                if ($request->username != "" && $request->password != "") {
-                    $user = $this->usercontroller->createUser($request);
-                    if ($user->status() == 200) {
-                        $customer->update(['user_id' => $user->getData()->id]);
-                        $message = "Customer Datas and Login Details Saved Successfully";
-                    }
-                }
+            $customer = Customer::findOrFail($id);
+            if ($customer->user_id && $customer->user_id != null) {
+                $delete = User::findOrFail($customer->user_id)->delete();
             }
-
-            //update user Login information
-            if ($customer->user_id) {
-                $request->merge([
-                    'user_id' => $customer->user_id,
-                ]);
-                $user = $this->usercontroller->createUser($request);
-                if ($user->status() == 200) {
-                    $message = "Customer Datas and Login Details Saved Successfully";
-                }
+            $delete = $customer->delete();
+            if ($delete) {
+                $message = "Customer data deleted successfully";
+                return $this->responseAPI(true, $message, 200);
+            } else {
+                $message = "Something went wrong";
+                return $this->responseAPI(false, $message, 200);
             }
-
-            if (!empty($request->deleteImages)) {
-                CustomerImage::whereIn('id', $request->deleteImages)->delete();
-            }
-
-            if (!empty($request->profile_image)) {
-                $this->uploadImages($request->profile_image, $customer);
-            }
-
-            DB::commit();
-            return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
-            DB::rollBack();
-            if ($e instanceof HttpResponseException) {
-                return $e->getResponse();
-            }
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
 
-
-    public function uploadImages($profile_image, $customer)
-    {
-        if (!empty($profile_image)) {
-            foreach ($profile_image as $key => $image) {
-                if ($image instanceof UploadedFile) {
-                    CustomerImage::whereIn('customer_id', [$customer->id])->delete();
-                    $fileUpload = $this->fileservice->upload($image, config('const.customer'), $customer->code);
-                    $url = config('const.customer') . "/" . $fileUpload->getBaseName();
-                    $img_name = $image->getClientOriginalName();
-
-                    $data = [
-                        'customer_id' => $customer->id,
-                        'name' => $img_name,
-                        'path' => $url,
-                        'created_by' => $customer->created_by,
-                        'updated_by' => $customer->updated_by,
-                    ];
-                    $customer->customerImages()->create($data);
-                }
-                // else{
-                //     $image = json_decode($image);
-                //     $data =[
-
-                //     ]
-                // }
-            }
-        }
-    }
+    
 }

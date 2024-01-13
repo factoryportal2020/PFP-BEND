@@ -22,8 +22,10 @@ class CreateUsersTable extends Migration
             $table->string('password');
             $table->bigInteger('role_id');
             $table->bigInteger('domain_id');
+            $table->tinyInteger('status')->default(1);
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

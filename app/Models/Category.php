@@ -30,6 +30,16 @@ class Category extends Model
         return $this->hasMany('App\Models\CategoryImage');
     }
 
+    public function items()
+    {
+        return $this->hasMany('App\Models\Item');
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany('App\Models\Task');
+    }
+
     public function domain()
     {
         return $this->belongsTo('App\Models\Domain');
