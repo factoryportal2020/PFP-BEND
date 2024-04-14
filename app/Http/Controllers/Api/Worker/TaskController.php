@@ -300,7 +300,9 @@ class TaskController extends BaseController
             $message = "Task Datas Updated Successfully";
 
             if (!empty($request->deleteImages)) {
+                $images = TaskImage::whereIn('id', $request->deleteImages)->get();
                 TaskImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.task'));
             }
 
             if (!empty($request->working_image)) {
@@ -346,7 +348,9 @@ class TaskController extends BaseController
                         'created_by' => $task->created_by,
                         'updated_by' => $task->updated_by,
                     ];
-                    $task->taskImages()->create($data);
+                    $task_image = $task->taskImages()->create($data);
+                    $size = $task_image->getFileSize();
+                    TaskImage::where('id', $task_image->id)->update(['size' => $size]);
                 }
             }
         }

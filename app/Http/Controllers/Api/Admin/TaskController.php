@@ -171,7 +171,7 @@ class TaskController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
             ]);
@@ -363,7 +363,7 @@ class TaskController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -379,7 +379,9 @@ class TaskController extends BaseController
             $message = "Task Datas Updated Successfully";
 
             if (!empty($request->deleteImages)) {
+                $images = TaskImage::whereIn('id', $request->deleteImages)->get();
                 TaskImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.task'));
             }
 
             if (!empty($request->task_image)) {
@@ -482,7 +484,9 @@ class TaskController extends BaseController
                         'created_by' => $task->created_by,
                         'updated_by' => $task->updated_by,
                     ];
-                    $task->taskImages()->create($data);
+                    $task_image = $task->taskImages()->create($data);
+                    $size = $task_image->getFileSize();
+                    TaskImage::where('id', $task_image->id)->update(['size' => $size]);
                 }
             }
         }
@@ -537,6 +541,9 @@ class TaskController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
+            $images = TaskImage::where('task_id', $id)->get();
+            TaskImage::where('task_id', $id)->delete();
+            $this->fileservice->remove_file_attachment($images);
             $delete = Task::findOrFail($id)->delete();
             if ($delete) {
                 $message = "Task data deleted successfully";

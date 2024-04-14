@@ -18,6 +18,7 @@ class Item extends Model
         'price',
         'category_id',
         'status',
+        'is_show',
 
         'specification',
         'note',

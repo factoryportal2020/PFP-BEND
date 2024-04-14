@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ItemImage extends Model
 {
@@ -14,6 +15,7 @@ class ItemImage extends Model
         'name',
         'path',
         'type',
+        'size',
 
         'created_by',
         'updated_by',
@@ -24,4 +26,11 @@ class ItemImage extends Model
     {
         return $this->belongsTo("App\Models\Item");
     }
+
+    public function getFileSize() 
+    {
+        // Ensure $this->file_path begins with '/public/';
+        return Storage::size($this->path);
+    }
+
 }

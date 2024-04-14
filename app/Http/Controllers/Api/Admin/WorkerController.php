@@ -111,7 +111,7 @@ class WorkerController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'role_id' => Role::worker(),
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,

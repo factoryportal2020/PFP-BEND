@@ -36,6 +36,7 @@ class ItemController extends BaseController
         try {
             $search_word = $request->search_word;
             $category_id = $request->category_id;
+            $admin_id = Auth::user()->admin->id;
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;
@@ -63,7 +64,7 @@ class ItemController extends BaseController
                 })
                 ->when($category_id, function ($query, $category_id) {
                     $query->where("categories.id", $category_id);
-                });
+                })->where('items.admin_id', $admin_id);
 
 
             $totalCount = $datas->count();
@@ -108,10 +109,10 @@ class ItemController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
-            ]); 
+            ]);
 
             $data = $request->all();
 
@@ -157,10 +158,11 @@ class ItemController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
+            $admin_id = Auth::user()->admin->id;
 
             $response = [];
 
-            $item = Item::findOrFail($id);
+            $item = Item::where('admin_id', $admin_id)->findOrFail($id);
 
             $mainImages = [];
             if (!empty($item->mainImages)) {
@@ -218,11 +220,11 @@ class ItemController extends BaseController
             }
 
             $id = encryptID($encrypt_id, 'd');
-            
+
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -236,7 +238,9 @@ class ItemController extends BaseController
             $message = "Item Datas Updated Successfully";
 
             if (!empty($request->deleteImages)) {
+                $item_images = ItemImage::whereIn('id', $request->deleteImages)->get();
                 ItemImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($item_images, config('const.item'));
             }
 
             if (!empty($request->item_image)) {
@@ -269,7 +273,12 @@ class ItemController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
-            $delete = Item::findOrFail($id)->delete();
+            $admin_id = Auth::user()->admin->id;
+
+            $images = ItemImage::where('item_id', $id)->get();
+            ItemImage::where('item_id', $id)->delete();
+            $this->fileservice->remove_file_attachment($images);
+            $delete = Item::where('admin_id', $admin_id)->findOrFail($id)->delete();
             if ($delete) {
                 $message = "Item data deleted successfully";
                 return $this->responseAPI(true, $message, 200);
@@ -327,6 +336,7 @@ class ItemController extends BaseController
     public function uploadImages($item_image, $item, $type = "main")
     {
         if (!empty($item_image)) {
+
             foreach ($item_image as $key => $image) {
                 if ($image instanceof UploadedFile) {
                     if ($type == "main") {
@@ -335,7 +345,7 @@ class ItemController extends BaseController
                     $fileUpload = $this->fileservice->upload($image, config('const.item'), $item->code);
                     $url = config('const.item') . "/" . $fileUpload->getBaseName();
                     $img_name = $image->getClientOriginalName();
-
+                    // $request->file('file')->getSize();
                     $data = [
                         'item_id' => $item->id,
                         'name' => $img_name,
@@ -344,7 +354,9 @@ class ItemController extends BaseController
                         'created_by' => $item->created_by,
                         'updated_by' => $item->updated_by,
                     ];
-                    $item->itemImages()->create($data);
+                    $item_image = $item->itemImages()->create($data);
+                    $size = $item_image->getFileSize();
+                    ItemImage::where('id', $item_image->id)->update(['size' => $size]);
                 }
             }
         }
@@ -352,11 +364,13 @@ class ItemController extends BaseController
 
     public function getCategoryList($selectCondition)
     {
+        $admin_id = Auth::user()->admin->id;
+        
         $datas = DB::table('categories')->selectRaw('id as value, name as label')
             ->when(($selectCondition == "wt"), function ($query) {
                 $query->where('deleted_at', null)
                     ->where('status', 1);
-            })
+            })->where('categories.admin_id', $admin_id)
             ->get();
         return $this->responseAPI(true, "Category get successfully", 200, $datas);
     }

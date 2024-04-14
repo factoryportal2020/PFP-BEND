@@ -9,6 +9,8 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use PhpParser\Node\Stmt\Foreach_;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 
 class CategoryRequest extends FormRequest
@@ -32,6 +34,16 @@ class CategoryRequest extends FormRequest
     {
         $id = ($request->encrypt_id) ? encryptID($request->encrypt_id, 'd') : null;
 
+        $admin_id = Auth::user()->admin->id;
+
+        $existName = DB::table('categories')->where('name', $request->name)->where('id', "!=", $id)->where('admin_id', "=", $admin_id)->first();
+
+        $name = [
+            'required', 'max:100',
+            ($id && !$existName) ?  Rule::unique('categories')->where('id', "=", $id) : (($existName) ? 'unique:categories' : '')
+
+        ];
+
         $image_mimes = 'mimes:jpeg,png,jpg,gif,svg';
         if ($id) {
             if (!empty($request->category_image) && !($request->category_image[0] instanceof UploadedFile)) {
@@ -40,7 +52,8 @@ class CategoryRequest extends FormRequest
         }
 
         return [
-            'name' => 'required|max:100',
+            'name' => $name,
+            'sub_title' => 'required|max:100',
             'description' => 'max:1000',
             'category_image.*' => $image_mimes,
         ];

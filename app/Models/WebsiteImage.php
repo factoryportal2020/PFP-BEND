@@ -6,14 +6,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
-class AdminImage extends Model
+class WebsiteImage extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'admin_id',
+        'website_id',
         'name',
         'path',
+        'type', //['banner','about','feature']
+        'title', 
+        'caption', 
+        'detail', 
         'size',
 
         'created_by',
@@ -21,9 +25,9 @@ class AdminImage extends Model
     ];
 
 
-    public function admin()
+    public function website()
     {
-        return $this->belongsTo("App\Models\Admin");
+        return $this->belongsTo("App\Models\Website");
     }
 
     public function getFileSize() 

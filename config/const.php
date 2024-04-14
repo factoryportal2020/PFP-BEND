@@ -7,4 +7,8 @@ return [
     'category' => 'public/category',
     'item' => 'public/item',
     'task' => 'public/task',
+    'website' => 'public/website',
+    'banner' => 'public/defaults/jewell/banner',
+    'about' => 'public/defaults/jewell/about',
+    'feature' => 'public/defaults/jewell/feature',
 ];

@@ -54,16 +54,16 @@ class CustomerRequest extends FormRequest
         }
 
         return [
-            'first_name' => 'required|max:100',
-            'last_name' => 'required|max:100',
+            'first_name' => 'max:100',
+            'last_name' => 'max:100',
             'email' => $email,
-            'gender' => 'required|max:25',
+            'gender' => 'max:25',
             'phone_no' => $phone_no,
             'whatsapp_no' => 'max:50',
             'instagram_id' => 'max:100',
-            'address' => 'required|max:1000',
-            'city' => 'required|max:100',
-            'state' => 'required|max:100',
+            'address' => 'max:1000',
+            'city' => 'max:100',
+            'state' => 'max:100',
             'notes' => 'max:1000',
             'profile_image.*' => $image_mimes,
         ];
@@ -107,6 +107,8 @@ class CustomerRequest extends FormRequest
     {
         $response['status'] = false;
         $response['message'] = $validator->errors()->toArray();
+        // print_r($validator->errors()->toArray());
+
         throw new HttpResponseException(
             response()->json($response, 200)
         );

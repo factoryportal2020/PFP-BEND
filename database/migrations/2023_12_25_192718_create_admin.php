@@ -41,6 +41,7 @@ class CreateAdmin extends Migration
             $table->bigInteger('admin_id');
             $table->string('name',100);
             $table->string('path',255);
+            $table->string('size',50)->nullable();
             $table->bigInteger('created_by');
             $table->bigInteger('updated_by');
             $table->timestamps();

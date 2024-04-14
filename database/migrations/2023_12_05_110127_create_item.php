@@ -25,6 +25,7 @@ class CreateItem extends Migration
             $table->string('description',2000)->nullable();
             $table->string('code',50);
             $table->tinyInteger('status')->default(1);
+            $table->tinyInteger('is_show')->default(1);
             $table->bigInteger('created_by');
             $table->bigInteger('updated_by');
             $table->timestamps();
@@ -36,6 +37,7 @@ class CreateItem extends Migration
             $table->bigInteger('item_id');
             $table->string('name',100);
             $table->string('path',255);
+            $table->string('size',50)->nullable();
             $table->string('type',100)->nullable();
             $table->bigInteger('created_by');
             $table->bigInteger('updated_by');

@@ -12,8 +12,11 @@ use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Admin;
+use App\Models\Customer;
 use Illuminate\Support\Carbon;
 use App\Http\Requests\AdminRequest;
+use App\Http\Requests\CustomerRequest;
+use App\Models\Website;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Mail\Message;
@@ -23,6 +26,7 @@ use Illuminate\Support\Facades\Hash;
 
 use Illuminate\Support\Str;
 use App\Notifications\ResetPasswordNotification;
+use Illuminate\Contracts\Session\Session;
 
 class AuthController extends BaseController
 {
@@ -82,7 +86,7 @@ class AuthController extends BaseController
             }
 
             $user = $request->user();
-            $tokenResult = $user->createToken('Personal Access Token');
+            $tokenResult = $user->createToken('Admin Access Token');
             $token = $tokenResult->token;
 
             if ($request->remember_me) :
@@ -94,7 +98,8 @@ class AuthController extends BaseController
 
             $userInfo = [
                 'role' => $userInfo->role->name,
-                'username' => $userInfo->username
+                'username' => $userInfo->username,
+                'email' => $userInfo->email
             ];
 
             $data = [
@@ -119,44 +124,80 @@ class AuthController extends BaseController
     {
         try {
             DB::beginTransaction();
-
+            $admin_id = encryptID($request->adminToken, 'd');
             $request->merge([
                 'domain_id' => 1,
-                'role_id' => 2,
+                'role_id' => ($request->role) ? $request->role : 2,
             ]);
 
-
-            //Admin 
-            $AdminRequest = new AdminRequest();
-            $validator = Validator::make($request->all(), $AdminRequest->rules($request), $AdminRequest->messages());
-            if ($validator->fails()) {
-                $AdminRequest->failedValidation($validator);
+            if ($request->role == 3) {
+                //Customer
+                $CustomerRequest = new CustomerRequest();
+                $validator = Validator::make($request->all(), $CustomerRequest->rules($request), $CustomerRequest->messages());
+                if ($validator->fails()) {
+                    $CustomerRequest->failedValidation($validator);
+                }
+            } else {
+                //Admin
+                $AdminRequest = new AdminRequest();
+                $validator = Validator::make($request->all(), $AdminRequest->rules($request), $AdminRequest->messages());
+                if ($validator->fails()) {
+                    $AdminRequest->failedValidation($validator);
+                }
             }
 
-            $data = [
-                "email" => $request->email,
-                "phone_no" => $request->phone_no,
-                "domain_id" => $request->domain_id,
-                "code" => Admin::getCode()
-            ];
-            $admin = Admin::create($data);
-            $admin->save();
-            $user = $this->usercontroller->createUser($request);
+            if ($request->role == 3) { //customer
+                $data = [
+                    "email" => $request->email,
+                    "phone_no" => $request->phone_no,
+                    'domain_id' => 1,
+                    "admin_id" => $admin_id,
+                    "code" => ($request->role == 3) ? Customer::getCode() : Admin::getCode()
+                ];
 
-            if ($user->status() == 200 && $admin) {
-                $admin->update(['user_id' => $user->getData()->id]);
-                $message = "Login Details Registered Successfully";
+                $customer = Customer::create($data);
+                $customer->save();
+
+                $request->merge([
+                    'admin_id' => $admin_id,
+                ]);
+                $user = $this->usercontroller->createUser($request);
+                // return $this->responseAPI(false, $user, 200);
+
+                if ($user->status() == 200) {
+                    $customer->update(['user_id' => $user->getData()->id]);
+                    $message = "Login Details Registered Successfully";
+                }
+                $action = "NewRegisterCustomer";
+            } else {
+                $data = [
+                    "email" => $request->email,
+                    "phone_no" => $request->phone_no,
+                    "domain_id" => $request->domain_id,
+                    "code" => ($request->role == 3) ? Customer::getCode() : Admin::getCode()
+                ];
+                $admin = Admin::create($data);
+                $admin->save();
+                $user = $this->usercontroller->createUser($request);
+
+                if ($user->status() == 200) {
+                    $admin->update(['user_id' => $user->getData()->id]);
+                    $message = "Login Details Registered Successfully";
+                }
+                $action = "NewRegisterAdmin";
             }
+
             DB::commit();
-            successLog("Register", "NewRegisterAdmin", "User",  $user->getData()->id, $message);
+            successLog("Register", $action, "User",  $user->getData()->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
-                errorLog("Register", "HttpResponseException", "User", null, $message);
+                errorLog("Register", "HttpResponseException", "User", null, $e->getMessage());
                 return $e->getResponse();
             }
-            errorLog("Register", "Exception", "User", null, $message);
+            errorLog("Register", "Exception", "User", null, $e->getMessage());
+            // print_r($e);
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -176,7 +217,12 @@ class AuthController extends BaseController
         $rules = array(
             'email' => "required|email",
         );
-        // return $this->responseAPI(true, $request->only('email'), 200);
+        if ($request->header('Admin-EncryptId')) {
+            $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $website = Website::where("admin_id", $admin_id)->first();
+            session(['AdminName' => $website->site_url]);
+        }
+        
         $arr = [];
         $validator = Validator::make($input, $rules);
         if ($validator->fails()) {
@@ -241,6 +287,10 @@ class AuthController extends BaseController
                 event(new PasswordReset($user));
             }
         );
+
+        if (session('AdminName')) {
+            session(['AdminName' => ""]);
+        }
 
         if ($status === Password::PASSWORD_RESET) {
             return $this->responseAPI(true, trans($status), 200);
