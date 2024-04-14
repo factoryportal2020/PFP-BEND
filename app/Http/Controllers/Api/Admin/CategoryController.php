@@ -35,6 +35,8 @@ class CategoryController extends BaseController
             $limit = $request->itemPerPage;
             $offset = $request->offset;
 
+            $admin_id = Auth::user()->admin->id;
+
             $totalCount = 0;
 
             $datas =
@@ -47,10 +49,10 @@ class CategoryController extends BaseController
                 // ->leftJoin('users', 'users.id', '=', 'categories.user_id')
                 ->when($search_word, function ($query, $search_word) {
                     $query->where(function ($whr_query) use ($search_word) {
-                        $whr_query->where('name', 'like', '%' . $search_word . '%');
+                        $whr_query->where('categories.name', 'like', '%' . $search_word . '%');
                         //   ->orWhere('votes', '>', 50);
                     });
-                });
+                })->where('categories.admin_id', $admin_id);
 
 
             $totalCount = $datas->count();
@@ -95,7 +97,7 @@ class CategoryController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
             ]);
@@ -137,9 +139,11 @@ class CategoryController extends BaseController
             }
             $id = encryptID($encrypt_id, 'd');
 
+            $admin_id = Auth::user()->admin->id;
+
             $response = [];
 
-            $category = Category::findOrFail($id);
+            $category = Category::where('admin_id', $admin_id)->findOrFail($id);
 
             $images = [];
             if (!empty($category->categoryImages)) {
@@ -149,13 +153,13 @@ class CategoryController extends BaseController
             }
 
             unset($category->categoryImages);
-            
+
             $response['category'] = $category;
             $response['category']['items_count'] = $category->items->count();
             $response['category']['tasks_count'] = $category->tasks->count();
             unset($category->items);
             unset($category->tasks);
-            
+
             $response['category_image']['category_image'] = $images;
 
             return $this->responseAPI(true, "Data get successfully", 200, $response);
@@ -192,7 +196,7 @@ class CategoryController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -206,7 +210,9 @@ class CategoryController extends BaseController
             $message = "Category Datas Updated Successfully";
 
             if (!empty($request->deleteImages)) {
+                $images = CategoryImage::whereIn('id', $request->deleteImages)->get();
                 CategoryImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.category'));
             }
 
             if (!empty($request->category_image)) {
@@ -225,13 +231,18 @@ class CategoryController extends BaseController
         }
     }
 
-    public function delete($encrypt_id){
+    public function delete($encrypt_id)
+    {
         try {
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
-            $delete = Category::findOrFail($id)->delete();
+            $admin_id = Auth::user()->admin->id;
+            // $images = CategoryImage::where('category_id', $id)->get();
+            // CategoryImage::where('category_id', $id)->delete();
+            // $this->fileservice->remove_file_attachment($images);
+            $delete = Category::where('admin_id', $admin_id)->findOrFail($id)->delete();
             if ($delete) {
                 $message = "Category data deleted successfully";
                 return $this->responseAPI(true, $message, 200);
@@ -267,7 +278,9 @@ class CategoryController extends BaseController
                         'created_by' => $category->created_by,
                         'updated_by' => $category->updated_by,
                     ];
-                    $category->categoryImages()->create($data);
+                    $category_image = $category->categoryImages()->create($data);
+                    $size = $category_image->getFileSize();
+                    CategoryImage::where('id', $category_image->id)->update(['size' => $size]);
                 }
                 // else{
                 //     $image = json_decode($image);

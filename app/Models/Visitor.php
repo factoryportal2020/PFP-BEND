@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,9 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use App\Models\Permission;
 use App\Notifications\ResetPasswordNotification;
-use Illuminate\Support\Facades\Session;
 
-class User extends Authenticatable
+class Visitor extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
@@ -28,8 +26,7 @@ class User extends Authenticatable
         'email',
         'username',
         'phone_no',
-        'role_id',
-        'domain_id',
+        'admin_id',
         'password',
         'status',
     ];
@@ -52,12 +49,6 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
-
-
-    public function role()
-    {
-        return $this->belongsTo('App\Models\Role');
-    }
 
     public function admin()
     {
@@ -87,28 +78,6 @@ class User extends Authenticatable
         return $user;
     }
 
-    public function hasRole($roles)
-    {
-        $roles = explode('|', $roles);
-        foreach ($roles as $role) {
-            if (($this->role->name == $role)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public function permissions()
-    {
-        $role_id = $this->role_id;
-        $result = [];
-        $permission_role = DB::table('permission_role')->where('role_id', $role_id)->pluck('permission_id');
-        if (!empty($permission_role)) {
-            $result = Permission::whereIn('id', $permission_role)->pluck('name');
-        }
-        return $result;
-    }
-
     /**
      * Send a password reset notification to the user.
      *
@@ -117,13 +86,7 @@ class User extends Authenticatable
      */
     public function sendPasswordResetNotification($token)
     {
-        if (session('AdminName')) {
-            $company_name  = session('AdminName');
-        } else {
-            $company_name  =   "";
-        }
-
-        $url = env('REACT_REQUEST_API_URL') . $company_name . '/reset/password/' . $token;
+        $url = env('REACT_REQUEST_API_URL') . 'reset/password/' . $token;
 
         $this->notify(new ResetPasswordNotification($url));
     }

@@ -25,7 +25,7 @@ function encryptID($string, $action = 'e')
 //createlog("customer","add","Customer",1)
 function successLog($menu, $action, $model = null, $id = null, $message = null)
 {
-    $content = $menu . "-" . $model . "-" . $action . "-" . $id;
+    $content = $menu . "-" . $model . "-" . $action . "-" . $id. "-" . $message;
 
     Log::build([
         'driver' => 'daily',

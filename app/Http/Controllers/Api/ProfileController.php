@@ -50,6 +50,7 @@ class ProfileController extends BaseController
             $userInfo = [
                 'role' => $user->role->name,
                 'username' => $user->username,
+                'email' => $user->email,
                 'user_encrypt_id' => encryptID($user->id, 'e'),
                 'profile_encrypt_id' => $profile_encrypt_id
             ];

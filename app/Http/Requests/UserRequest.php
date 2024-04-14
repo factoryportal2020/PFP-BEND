@@ -49,7 +49,7 @@ class UserRequest extends FormRequest
         ];
 
         $password = [
-            ($id) ? '' : 'required|min:8|confirmed'
+            ($id) ? '' : 'required', 'confirmed'
         ];
 
         return [
@@ -72,6 +72,7 @@ class UserRequest extends FormRequest
             'username.unique' => 'Enter Unique username',
             'username.max' => 'First name no longer than 255 characters',
             'password.required' => 'Password is required',
+            'password.min' => 'Password should have minimum 8 character',
             'email.required' => 'Email is required',
             'email.unique' => 'Email is already registered',
             'email.max' => 'Email no longer than 255 characters',

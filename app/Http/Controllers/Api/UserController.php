@@ -52,7 +52,7 @@ class UserController extends BaseController
             "password" => $request->password,
             "phone_no" => $request->phone_no,
             "role_id" => $request->role_id,
-            "status" => ($request->status)?$request->status:1,
+            "status" => ($request->status) ? $request->status : 1,
             "domain_id" => $request->domain_id
         ];
         if ($request->user_id != null && $request->user_id != "") {
@@ -251,7 +251,9 @@ class UserController extends BaseController
             }
 
             if (!empty($request->deleteImages)) {
+                $images = AdminImage::whereIn('id', $request->deleteImages)->get();
                 AdminImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.admin'));
             }
 
             if (!empty($request->profile_image)) {
@@ -284,11 +286,13 @@ class UserController extends BaseController
             if ($encrypt_id == null || $encrypt_id == '') {
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
-
             $auth = Auth::user();
+
+            $admin_id = ($request->header('Admin-EncryptId') != null || !$request->header('Admin-EncryptId')) ? encryptID($request->header('Admin-EncryptId'), 'd') : $auth->admin->id;
+
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $admin_id,
                 'role_id' => Role::customer(),
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
@@ -303,6 +307,7 @@ class UserController extends BaseController
 
             $customer = Customer::updateOrCreate(["id" => $id], $data);
             // $customer->save();
+            // return $this->responseAPI(true, $customer->user_id, 200);
 
             $message = "Customer Datas Updated Successfully";
 
@@ -330,7 +335,9 @@ class UserController extends BaseController
             }
 
             if (!empty($request->deleteImages)) {
+                $images = CustomerImage::whereIn('id', $request->deleteImages)->get();
                 CustomerImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.customer'));
             }
 
             if (!empty($request->profile_image)) {
@@ -367,7 +374,7 @@ class UserController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'admin_id' => $auth->admin->id,
                 'role_id' => Role::worker(),
                 'updated_by' => $auth->id,
             ]);
@@ -405,7 +412,9 @@ class UserController extends BaseController
             }
 
             if (!empty($request->deleteImages)) {
+                $images = WorkerImage::whereIn('id', $request->deleteImages)->get();
                 WorkerImage::whereIn('id', $request->deleteImages)->delete();
+                $this->fileservice->remove_file_attachment($images, config('const.worker'));
             }
 
             if (!empty($request->profile_image)) {
@@ -440,14 +449,10 @@ class UserController extends BaseController
                         'created_by' => $admin->created_by,
                         'updated_by' => $admin->updated_by,
                     ];
-                    $admin->adminImages()->create($data);
+                    $admin_image = $admin->adminImages()->create($data);
+                    $size = $admin_image->getFileSize();
+                    AdminImage::where('id', $admin_image->id)->update(['size' => $size]);
                 }
-                // else{
-                //     $image = json_decode($image);
-                //     $data =[
-
-                //     ]
-                // }
             }
         }
     }
@@ -469,14 +474,10 @@ class UserController extends BaseController
                         'created_by' => $worker->created_by,
                         'updated_by' => $worker->updated_by,
                     ];
-                    $worker->workerImages()->create($data);
+                    $worker_image = $worker->workerImages()->create($data);
+                    $size = $worker_image->getFileSize();
+                    WorkerImage::where('id', $worker_image->id)->update(['size' => $size]);
                 }
-                // else{
-                //     $image = json_decode($image);
-                //     $data =[
-
-                //     ]
-                // }
             }
         }
     }
@@ -498,14 +499,10 @@ class UserController extends BaseController
                         'created_by' => $customer->created_by,
                         'updated_by' => $customer->updated_by,
                     ];
-                    $customer->customerImages()->create($data);
+                    $customer_image = $customer->customerImages()->create($data);
+                    $size = $customer_image->getFileSize();
+                    CustomerImage::where('id', $customer_image->id)->update(['size' => $size]);
                 }
-                // else{
-                //     $image = json_decode($image);
-                //     $data =[
-
-                //     ]
-                // }
             }
         }
     }

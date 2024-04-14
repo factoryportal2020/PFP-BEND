@@ -28,7 +28,7 @@ class CustomerController extends BaseController
 
     public function __construct()
     {
-        $this->middleware('role:admin');
+        $this->middleware('role:admin|customer');
         $this->fileservice = new FileService();
         $this->usercontroller = new UserController();
     }
@@ -106,11 +106,11 @@ class CustomerController extends BaseController
 
             $auth = Auth::user();
             $request->merge([
-                'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->id,
+                'domain_id' => ($request->domain_id) ? $request->domain_id : $auth->domain_id,
+                'admin_id' => ($request->admin_id) ? $request->admin_id : $auth->admin->id,
                 'role_id' => Role::customer(),
-                'created_by' => $auth->id,
-                'updated_by' => $auth->id,
+                'created_by' => ($request->created_by) ? $request->created_by : $auth->id,
+                'updated_by' => ($request->updated_by) ? $request->updated_by : $auth->id,
             ]);
 
             $data = $request->all();
@@ -198,6 +198,4 @@ class CustomerController extends BaseController
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
-
-    
 }

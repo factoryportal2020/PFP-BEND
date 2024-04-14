@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class TaskImage extends Model
 {
@@ -15,6 +16,7 @@ class TaskImage extends Model
         'path',
         'type', //['main','initial','working','completed','delivered']
         'extension', //['image','pdf','doc','xls']
+        'size',
 
         'created_by',
         'updated_by',
@@ -24,5 +26,10 @@ class TaskImage extends Model
     public function task()
     {
         return $this->belongsTo("App\Models\Task");
+    }
+
+    public function getFileSize() 
+    {
+        return Storage::size($this->path);
     }
 }

@@ -40,6 +40,7 @@ class CreateTasks extends Migration
             $table->bigInteger('task_id');
             $table->string('name', 100);
             $table->string('path', 255);
+            $table->string('size',50)->nullable();
             $table->string('type', 100)->nullable();
             $table->string('extension', 100)->default('image');
             $table->bigInteger('created_by');
