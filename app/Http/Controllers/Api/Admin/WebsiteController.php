@@ -56,28 +56,33 @@ class WebsiteController extends BaseController
 
             if (!empty($request->logo_image)) {
                 $this->uploadImages($request->logo_image, $website, "logo");
+                successLog("Website", "Create-logo-UploadImage", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->banner_image1) || $request->banner_title1 || $request->banner_caption1) {
                 $banner_image_data1 = [$request->banner_title1, $request->banner_caption1];
                 $this->uploadImages($request->banner_image1, $website, "banner1", $banner_image_data1);
                 $this->uploadImageDatas($website, "banner1", $banner_image_data1);
+                successLog("Website", "Create-banner1-Upload-Image-Data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
             if (!empty($request->banner_image2) || $request->banner_title2 || $request->banner_caption2) {
                 $banner_image_data2 = [$request->banner_title2, $request->banner_caption2];
                 $this->uploadImages($request->banner_image2, $website, "banner2", $banner_image_data2);
                 $this->uploadImageDatas($website, "banner2", $banner_image_data2);
+                successLog("Website", "Create-banner2-Upload-Image-Data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
             if (!empty($request->banner_image3) || $request->banner_title3 || $request->banner_caption3) {
                 $banner_image_data3 = [$request->banner_title3, $request->banner_caption3];
                 $this->uploadImages($request->banner_image3, $website, "banner3", $banner_image_data3);
                 $this->uploadImageDatas($website, "banner3", $banner_image_data3);
+                successLog("Website", "Create-banner3-Upload-Image-Data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->about_image) || $request->about) {
                 $about_image_data = [$request->about];
                 $this->uploadImages($request->about_image, $website, "about", $about_image_data);
                 $this->uploadImageDatas($website, "about", $about_image_data);
+                successLog("Website", "Create-about-Upload-Image-Data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->feature_image1)) {
@@ -95,12 +100,15 @@ class WebsiteController extends BaseController
             $message = "Website Datas Saved Successfully";
 
             DB::commit();
+            successLog("Website", "Create", "Website",  $website->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Website", "Create", "Website",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Website", "Create", "Website",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -291,27 +299,32 @@ class WebsiteController extends BaseController
                 $banner_image_data1 = [$request->banner_title1, $request->banner_caption1];
                 $this->uploadImages($request->banner_image1, $website, "banner1", $banner_image_data1);
                 $this->uploadImageDatas($website, "banner1", $banner_image_data1, $websiteUpdate_id);
+                successLog("Website", "update-banner1-image-data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
             if (!empty($request->banner_image2) || $request->banner_title2 || $request->banner_caption2) {
                 $banner_image_data2 = [$request->banner_title2, $request->banner_caption2];
                 $this->uploadImages($request->banner_image2, $website, "banner2", $banner_image_data2);
                 $this->uploadImageDatas($website, "banner2", $banner_image_data2, $websiteUpdate_id);
+                successLog("Website", "update-banner2-image-data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
             if (!empty($request->banner_image3) || $request->banner_title3 || $request->banner_caption3) {
                 $banner_image_data3 = [$request->banner_title3, $request->banner_caption3];
                 $this->uploadImages($request->banner_image3, $website, "banner3", $banner_image_data3);
                 $this->uploadImageDatas($website, "banner3", $banner_image_data3, $websiteUpdate_id);
+                successLog("Website", "update-banner3-image-data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->about_image) || $request->about) {
                 $about_image_data = [$request->about];
                 $this->uploadImages($request->about_image, $website, "about", $about_image_data);
                 $this->uploadImageDatas($website, "about", $about_image_data, $websiteUpdate_id);
+                successLog("Website", "update-about-image-data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->logo_image)) {
                 $this->uploadImages($request->logo_image, $website, "logo");
                 $this->uploadImageDatas($website, "logo", [], $websiteUpdate_id);
+                successLog("Website", "update-logo-image-data", "WebsiteImage",  $website->id, "Website image uploaded");
             }
 
             if (!empty($request->feature_image1)) {
@@ -329,6 +342,7 @@ class WebsiteController extends BaseController
                 if (!empty($images) && ($website_encrypt_id == null || !$website_encrypt_id)) {
                     TempImage::whereIn('id', $request->deleteImages)->update(['delete_at' => date("Y-m-d H:i:s")]);
                     $this->fileservice->remove_file_attachment($images, config('const.website'));
+                    successLog("Website", "update-image-delete", "TempImage",  implode("~", $request->deleteImages), "Website image deleted");
                 }
                 if ($website_encrypt_id) {
                     $website_id = encryptID($website_encrypt_id, 'd');
@@ -339,6 +353,7 @@ class WebsiteController extends BaseController
                             WebsiteImage::where('website_id', $website_id)->where('type', $deletingImage['type'])->forceDelete();
                         }
                         $this->fileservice->remove_file_attachment($deletingImages, config('const.website'));
+                        successLog("Website", "update-image-delete", "WebsiteImage",  implode("~", $request->deleteImages), "Website image deleted");
                     }
                 }
             }
@@ -346,12 +361,15 @@ class WebsiteController extends BaseController
             $message = "Website Datas Updated Successfully";
 
             DB::commit();
+            successLog("Website", "update", "Website",  $website->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Website", "Update", "Website",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Website", "Update", "Website",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage() . $e->getLine(), 200);
         }
     }
@@ -379,6 +397,7 @@ class WebsiteController extends BaseController
                 $launch_at = $websiteCheck->launch_at;
                 if ($launch_at != null) {
                     $message = "Your Website Launched Successfully";
+                    successLog("Website", "update-launched", "Website",  $website_id, $message);
                     return $this->responseAPI(true, $message, 200);
                 }
             }
@@ -424,12 +443,19 @@ class WebsiteController extends BaseController
             $message = ($website) ? "Your Website Launched Successfully" : "Something went wrong";
 
             DB::commit();
+            if ($website) {
+                successLog("Website", "launched", "Website",  $website->id, $message);
+            } else {
+                errorLog("Website", "launched", "Website",  null, $message);
+            }
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Website", "Launched", "Website",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Website", "Launched", "Website",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage() . $e->getLine(), 200);
         }
     }

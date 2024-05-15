@@ -15,6 +15,7 @@ use Illuminate\Http\UploadedFile;
 use App\Services\FileService;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Requests\UserRequest;
+use App\Models\Admin;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Storage;
@@ -44,6 +45,8 @@ class CustomerController extends BaseController
             $offset = $request->offset;
 
             $totalCount = 0;
+            $user = Auth::user();
+            $admin_id = Admin::where('user_id', $user->id)->value('id');
 
             $datas =
                 Customer::select(
@@ -62,7 +65,7 @@ class CustomerController extends BaseController
                 })
                 ->when($city, function ($query, $city) {
                     $query->where("city", $city);
-                });
+                })->where('customers.admin_id', $admin_id);
 
 
             $totalCount = $datas->count();
@@ -134,20 +137,25 @@ class CustomerController extends BaseController
                 if ($user->status() == 200) {
                     $customer->update(['user_id' => $user->getData()->id]);
                     $message = "Customer Datas and Login Details Saved Successfully";
+                    successLog("Customer", "Create", "User",  $user->getData()->id, $message);
                 }
             }
 
             if (!empty($request->profile_image)) {
                 $this->usercontroller->uploadCustomerImages($request->profile_image, $customer);
+                successLog("Customer", "create-UploadImage", "CustomerImage",  $customer->id, $message);
             }
 
             DB::commit();
+            successLog("Customer", "Create", "Customer",  $customer->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Customer", "Create", "Customer",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Customer", "Create", "Customer",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -189,12 +197,15 @@ class CustomerController extends BaseController
             $delete = $customer->delete();
             if ($delete) {
                 $message = "Customer data deleted successfully";
+                successLog("Customer", "Delete", "Customer",  $customer->id, $message);
                 return $this->responseAPI(true, $message, 200);
             } else {
                 $message = "Something went wrong";
+                errorLog("Customer", "Delete", "Customer",  $customer->id, $message);
                 return $this->responseAPI(false, $message, 200);
             }
         } catch (\Exception $e) {
+            errorLog("Customer", "Delete", "Customer",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }

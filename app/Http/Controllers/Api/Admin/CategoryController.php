@@ -117,15 +117,19 @@ class CategoryController extends BaseController
 
             if (!empty($request->category_image)) {
                 $this->uploadImages($request->category_image, $category);
+                successLog("Category", "Create-UploadImage", "CategoryImage",  $category->id, $message);
             }
 
             DB::commit();
+            successLog("Category", "Create", "Category",  $category->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Category", "Create", "Category",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Category", "Create", "Category",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -213,20 +217,25 @@ class CategoryController extends BaseController
                 $images = CategoryImage::whereIn('id', $request->deleteImages)->get();
                 CategoryImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($images, config('const.category'));
+                successLog("Category", "update-image-delete", "CategoryImage",  implode("~", $request->deleteImages), "Category image deleted");
             }
 
             if (!empty($request->category_image)) {
                 // CategoryImage::whereIn('category_id', [$id])->delete();
                 $this->uploadImages($request->category_image, $category);
+                successLog("Category", "update-image-upload", "CategoryImage",  $category->id, "Category image uploaded");
             }
 
             DB::commit();
+            successLog("Category", "update", "Category",  $category->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Category", "Update", "Category",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Category", "Update", "Category",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -242,15 +251,19 @@ class CategoryController extends BaseController
             // $images = CategoryImage::where('category_id', $id)->get();
             // CategoryImage::where('category_id', $id)->delete();
             // $this->fileservice->remove_file_attachment($images);
+            $category = Category::where('admin_id', $admin_id)->findOrFail($id)->first();
             $delete = Category::where('admin_id', $admin_id)->findOrFail($id)->delete();
             if ($delete) {
                 $message = "Category data deleted successfully";
+                successLog("Category", "Delete", "Category",  $category->id, $message);
                 return $this->responseAPI(true, $message, 200);
             } else {
                 $message = "Something went wrong";
+                errorLog("Category", "Delete", "Category",  $category->id, $message);
                 return $this->responseAPI(false, $message, 200);
             }
         } catch (\Exception $e) {
+            errorLog("Category", "Delete", "Category",  $category->id, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }

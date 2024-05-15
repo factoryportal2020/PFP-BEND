@@ -6,10 +6,12 @@ use App\Http\Controllers\Api\Admin\CategoryController;
 use App\Http\Controllers\Api\Admin\ItemController;
 use App\Http\Controllers\Api\Admin\TaskController;
 use App\Http\Controllers\Api\Admin\WebsiteController;
+use App\Http\Controllers\Api\Admin\EnquiryController;
 use App\Http\Controllers\Api\Website\HomeController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\Website\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +48,18 @@ Route::group(['middleware' => ['cors']], function () {
 
 
     Route::group(['middleware' => ['auth:api']], function () {
+
+
+        //Dashboard (superAdmin, Admin, Worker, Customer)
+        Route::post('admin/dashboard', [DashboardController::class, 'dashboard']);
+        Route::post('customer/dashboard', [DashboardController::class, 'dashboard']);
+        Route::post('worker/dashboard', [DashboardController::class, 'dashboard']);
+
+        //Notification (superAdmin, Admin, Worker, Customer)
+        Route::post('admin/notification', [DashboardController::class, 'getNotification']);
+        Route::post('customer/notification', [DashboardController::class, 'getNotification']);
+        Route::post('worker/notification', [DashboardController::class, 'getNotification']);
+
         //Super admin
         //Customer
         Route::post('superadmin/admin/list', [AdminController::class, 'list']);
@@ -108,6 +122,20 @@ Route::group(['middleware' => ['cors']], function () {
         Route::get('admin/website/get', [WebsiteController::class, 'get']);
         Route::post('admin/website/update/launchat', [WebsiteController::class, 'launchAtUpdate']);
 
+
+        //Enquiry
+        Route::post('admin/enquiry/list', [EnquiryController::class, 'enquiryList']);
+
+        //Favourite
+        Route::post('admin/favourite/list', [EnquiryController::class, 'favouriteList']);
+
+        //Subscribe
+        Route::post('admin/subscribe/list', [EnquiryController::class, 'subscribeList']);
+
+        //Message
+        Route::post('admin/message/list', [EnquiryController::class, 'messageList']);
+
+
         //User
         Route::post('admin/user/create', [UserController::class, 'create']);
 
@@ -140,6 +168,9 @@ Route::group(['middleware' => ['cors']], function () {
         Route::get('user/profile', [ProfileController::class, 'profile']);
     });
 
+
+
+
     // Website - Frontend
     Route::post('website/category', [HomeController::class, 'getCategoryList']);
 
@@ -151,7 +182,7 @@ Route::group(['middleware' => ['cors']], function () {
     Route::post('website/contact', [HomeController::class, 'getContact']);
 
     Route::post('website/customer', [HomeController::class, 'getCustomerList']);
-    Route::get('website/product/{encrypt_id}', [HomeController::class, 'getProduct']);
+    Route::any('website/product/{encrypt_id}', [HomeController::class, 'getProduct']);
 
     //Admin auth
     Route::post('website/admin/get', [AuthController::class, 'getAdmin']);
@@ -165,7 +196,13 @@ Route::group(['middleware' => ['cors']], function () {
     Route::post('website/enquiry/save', [HomeController::class, 'enquirySave']);
     Route::post('website/enquiry', [HomeController::class, 'enquiryList']);
 
-    
+    Route::post('website/favourite/save', [HomeController::class, 'favouriteSave']);
+    Route::post('website/favourite', [HomeController::class, 'favouriteList']);
+
+    Route::post('website/subscribe/save', [HomeController::class, 'subscribeSave']);
+    Route::post('website/message/save', [HomeController::class, 'messageSave']);
+
+
     Route::group(['middleware' => ['auth:api']], function () {
 
         Route::get('website/profile/get/{encrypt_id}', [CustomerController::class, 'get']);
