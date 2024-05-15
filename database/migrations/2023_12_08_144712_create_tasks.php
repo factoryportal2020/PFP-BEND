@@ -18,7 +18,7 @@ class CreateTasks extends Migration
             $table->bigInteger('admin_id');
             $table->bigInteger('domain_id');
             $table->string('title', 100);
-            $table->bigInteger('worker_id');
+            $table->bigInteger('worker_id')->nullable();
             $table->bigInteger('customer_id')->nullable();
             $table->bigInteger('category_id');
             $table->string('specification', 1000)->nullable();

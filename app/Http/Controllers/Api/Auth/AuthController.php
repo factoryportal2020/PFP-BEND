@@ -16,6 +16,8 @@ use App\Models\Customer;
 use Illuminate\Support\Carbon;
 use App\Http\Requests\AdminRequest;
 use App\Http\Requests\CustomerRequest;
+use App\Models\Enquiry;
+use App\Models\Favourite;
 use App\Models\Website;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
@@ -61,7 +63,7 @@ class AuthController extends BaseController
 
             if (!$userWT) {
                 $message = "Email or Username Not Registered";
-                errorLog("login", "Email_check", "User", null, $message);
+                successLog("login", "Email_check", "User", null, $message);
                 return $this->responseAPI(false, $message, 200);
             }
 
@@ -72,7 +74,7 @@ class AuthController extends BaseController
 
             if (!$user) {
                 $message = "Your Account have suspended, Contact Your Admin!";
-                errorLog("login", "Auth_withTrashed", "User", null, $message);
+                successLog("login", "Auth_withTrashed", "User", null, $message);
                 return $this->responseAPI(false, $message, 200);
             }
             Auth::attempt(['email' => $user->email, 'password' => $request->password]);
@@ -81,7 +83,7 @@ class AuthController extends BaseController
                 !Auth::attempt(['username' => $user->username, 'password' => $request->password])
             ) {
                 $message = "Invalid login credentials";
-                errorLog("login", "Auth_attempt", "User", null, $message);
+                successLog("login", "Auth_attempt", "User", null, $message);
                 return $this->responseAPI(false, $message, 200);
             }
 
@@ -96,11 +98,29 @@ class AuthController extends BaseController
 
             $message = "Login Successfully";
 
-            $userInfo = [
-                'role' => $userInfo->role->name,
-                'username' => $userInfo->username,
-                'email' => $userInfo->email
-            ];
+            if ($user->role->name == "customer" || $user->role_id == 3) {
+                $enquiries = Enquiry::where('user_id', $user->id)->get();
+                $favourites = Favourite::where('user_id', $user->id)->get();
+                $customer_id = Customer::where('user_id', $user->id)->value('id');
+                $profile_encrypt_id = ($customer_id) ? encryptID($customer_id, 'e') : null;
+                $userInfo = [
+                    'role' => $userInfo->role->name,
+                    'username' => $userInfo->username,
+                    'email' => $userInfo->email,
+                    'user_encrypt_id' => encryptID($user->id, 'e'),
+                    'profile_encrypt_id' => $profile_encrypt_id,
+                    'enquiry_count' => $enquiries->count(),
+                    'favourite_count' => $favourites->count(),
+                ];
+            } else {
+                $userInfo = [
+                    'role' => $userInfo->role->name,
+                    'username' => $userInfo->username,
+                    'email' => $userInfo->email,
+                ];
+            }
+
+
 
             $data = [
                 'access_token' => $tokenResult->accessToken,
@@ -135,6 +155,7 @@ class AuthController extends BaseController
                 $CustomerRequest = new CustomerRequest();
                 $validator = Validator::make($request->all(), $CustomerRequest->rules($request), $CustomerRequest->messages());
                 if ($validator->fails()) {
+                    successLog("Register", "CustomerValidation", "User",  null, $validator->errors()->first());
                     $CustomerRequest->failedValidation($validator);
                 }
             } else {
@@ -142,6 +163,7 @@ class AuthController extends BaseController
                 $AdminRequest = new AdminRequest();
                 $validator = Validator::make($request->all(), $AdminRequest->rules($request), $AdminRequest->messages());
                 if ($validator->fails()) {
+                    successLog("Register", "AdminValidation", "User",  null, $validator->errors()->first());
                     $AdminRequest->failedValidation($validator);
                 }
             }
@@ -222,11 +244,12 @@ class AuthController extends BaseController
             $website = Website::where("admin_id", $admin_id)->first();
             session(['AdminName' => $website->site_url]);
         }
-        
+
         $arr = [];
         $validator = Validator::make($input, $rules);
         if ($validator->fails()) {
             $arr = array("status" => 200, "message" => $validator->errors()->first());
+            successLog("forgot_password", "EmailValidation", "User",  null, $validator->errors()->first());
             throw new HttpResponseException(
                 response()->json($arr, 200)
             );
@@ -271,6 +294,7 @@ class AuthController extends BaseController
         $validator = Validator::make($input, $rules);
         if ($validator->fails()) {
             $arr = array("status" => 200, "message" => $validator->errors()->first());
+            successLog("reset_password", "InputValidation", "User",  null, $validator->errors()->first());
             throw new HttpResponseException(
                 response()->json($arr, 200)
             );
@@ -293,8 +317,10 @@ class AuthController extends BaseController
         }
 
         if ($status === Password::PASSWORD_RESET) {
+            successLog("reset_password", "PasswordReset", "User",  null, trans($status));
             return $this->responseAPI(true, trans($status), 200);
         } else {
+            successLog("reset_password", "PasswordReset", "User",  null, trans($status));
             return $this->responseAPI(false, trans($status), 200);
         }
     }

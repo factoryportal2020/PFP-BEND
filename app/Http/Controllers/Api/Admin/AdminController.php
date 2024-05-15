@@ -127,20 +127,25 @@ class AdminController extends BaseController
                 if ($user->status() == 200) {
                     $admin->update(['user_id' => $user->getData()->id]);
                     $message = "Admin Datas and Login Details Saved Successfully";
+                    successLog("Admin", "Create", "User",  $user->getData()->id, $message);
                 }
             }
 
             if (!empty($request->profile_image)) {
                 $this->usercontroller->uploadAdminImages($request->profile_image, $admin);
+                successLog("Admin", "Create-UploadImage", "AdminImage",  $admin->id, $message);
             }
 
             DB::commit();
+            successLog("Admin", "Create", "Admin",  $admin->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Admin", "Create", "Admin",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Admin", "Create", "Admin",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -182,13 +187,16 @@ class AdminController extends BaseController
             $delete = $admin->delete();
             if ($delete) {
                 $message = "Admin data deleted successfully";
+                successLog("Admin", "Delete", "Admin",  $admin->id, $message);
                 return $this->responseAPI(true, $message, 200);
             } else {
                 $message = "Something went wrong";
+                errorLog("Admin", "Delete", "Admin",  $admin->id, $message);
                 return $this->responseAPI(false, $message, 200);
             }
         } catch (\Exception $e) {
-            return $this->responseAPI(false, $e->getMessage(), 200);
+                errorLog("Admin", "Delete", "Admin",  $admin->id, $e->getMessage());
+                return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
 }

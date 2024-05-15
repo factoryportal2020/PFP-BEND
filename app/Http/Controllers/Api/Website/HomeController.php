@@ -2,20 +2,32 @@
 
 namespace App\Http\Controllers\Api\Website;
 
+use App\Events\SaveNotification;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Controllers\BaseController;
+use App\Models\Admin;
 use Illuminate\Support\Facades\DB;
 use App\Models\Item;
 use App\Models\Website;
 use App\Models\Category;
 use App\Models\Enquiry;
+use App\Models\Favourite;
+use App\Models\Message;
+use App\Models\Subscribe;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends BaseController
 {
     //
+    // public function __construct()
+    // {
+    //     $this->middleware('role:customer');
+    // }
+
     public function getCustomerList(Request $request)
     {
         try {
@@ -367,6 +379,7 @@ class HomeController extends BaseController
             $id = encryptID($encrypt_id, 'd');
 
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
 
             $response = [];
 
@@ -431,8 +444,14 @@ class HomeController extends BaseController
             $response['related_items'] = $related_items;
             //End Related items
 
+            $favourite = false;
+            if ($user_id) {
+                $favouritedata = Favourite::where('item_id', $item->id)->where('user_id', $user_id)->first();
+                $favourite = ($favouritedata) ? true : false;
+            }
 
             $response['item'] = $item;
+            $response["favourite"] = $favourite;
             $response['item']['category_name'] = $category_name;
             $response['other_specifications'] = $item->itemSpecifications;
             $response['price_breakdowns'] = $item->itemBreakdowns;
@@ -472,30 +491,38 @@ class HomeController extends BaseController
     {
         try {
             $response = [];
-            if ($request->currentEncryptID == null || $request->currentEncryptID == "") {
-                return $this->responseAPI(false, "Product Id Required", 200);
-            }
-            $item_id = encryptID($request->currentEncryptID, 'd');
-            $user_id = null;
-            if ($request->user_id != null &&  $request->user_id != "") {
-                $user_id = encryptID($request->userEncryptID, 'd');
-            }
-            if ($request->email == null || $request->email == "") {
-                $response['message'] = ["Error" => ["Email Id Required"]];
-                return $this->responseAPI(false, $response['message'], 200);
-            }
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
             if ($admin_id == null || $admin_id == "") {
                 $response['message'] = ["Error" => ["Admin Id Required"]];
+                successVisitorLog("Enquiry", "Enquiry-Save", "EnquiryAdminId",  null, $response['message']['Error'][0]);
                 return $this->responseAPI(false, $response['message'], 200);
             }
+
+            if ($request->currentEncryptID == null || $request->currentEncryptID == "") {
+                successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, "Product Id Required");
+                return $this->responseAPI(false, "Product Id Required", 200);
+            }
+            $item_id = encryptID($request->currentEncryptID, 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
+            if ($user_id == null || $user_id == "") {
+                $response['message'] = ["Error" => ["User Login Required"]];
+                successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+            if ($request->email == null || $request->email == "") {
+                $response['message'] = ["Error" => ["Email Id Required"]];
+                successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+
             $enquiry = Enquiry::where("item_id", $item_id)->where("email", $request->email)->first();
 
             if ($enquiry && $user_id) {
-                $enquiry = Enquiry::where("item_id", $item_id)->where("user_id", $request->user_id)->first();
+                $enquiry = Enquiry::where("item_id", $item_id)->where("user_id", $user_id)->first();
             }
             if ($enquiry) {
                 $response['message'] = ["Error" => ["Item have Already Enquired"]];
+                successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
                 return $this->responseAPI(false, $response['message'], 200);
             }
             $count = ($request->count) ? $request->count : 1;
@@ -512,8 +539,14 @@ class HomeController extends BaseController
             $new_enquiry->save();
 
             $message = ($new_enquiry) ? "Item have enquired" : "Something went wrong";
+            if ($new_enquiry) {
+                successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  $new_enquiry->id, $message);
+            } else {
+                errorVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, $message);
+            }
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
+            errorVisitorLog("Enquiry", "Enquiry-Save", "Enquiry",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -523,6 +556,13 @@ class HomeController extends BaseController
         try {
             $search_word = $request->search_word;
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
+
+            if (!$user_id || $user_id == null) {
+                $response['data'] = [];
+                $response['totalCount'] = 0;
+                return $this->responseAPI(true, "No Records Found", 200, $response);
+            }
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;
@@ -554,6 +594,7 @@ class HomeController extends BaseController
                 ->where('items.deleted_at', null)
                 ->where('items.admin_id', $admin_id)
                 ->where('enquiries.admin_id', $admin_id)
+                ->where('enquiries.user_id', $user_id)
                 ->where('items.is_show', 1)
                 ->where('items.status', 1);
 
@@ -587,6 +628,239 @@ class HomeController extends BaseController
 
             return $this->responseAPI(true, "Enquiry list get successfully", 200, $response);
         } catch (\Exception $e) {
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+    public function favouriteSave(Request $request)
+    {
+        try {
+            $response = [];
+            $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            if ($admin_id == null || $admin_id == "") {
+                $response['message'] = ["Error" => ["Admin Id Required"]];
+                successVisitorLog("Favourite", "Favourite-Save", "FavouriteAdminId",  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+
+            if ($request->currentEncryptID == null || $request->currentEncryptID == "") {
+                successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  null, "Product Id Required");
+                return $this->responseAPI(false, "Product Id Required", 200);
+            }
+            $item_id = encryptID($request->currentEncryptID, 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
+            if ($user_id == null || $user_id == "") {
+                $response['message'] = ["Error" => ["User Login Required"]];
+                successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+            $user = User::findOrFail($user_id);
+
+
+
+            $favourite = Favourite::where("item_id", $item_id)->where("user_id", $user_id)->first();
+            if ($favourite) {
+                Favourite::where("item_id", $item_id)->where("user_id", $user_id)->delete();
+                $response["favourite"] = false;
+                successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  $item_id, "Item removed from favourite list");
+                return $this->responseAPI(true, "Item removed from favourite list", 200, $response);
+            }
+
+            $email = $user->email;
+            $data = ['admin_id' => $admin_id, 'user_id' => $user_id, 'email' => $email, 'item_id' => $item_id];
+
+            $new_favourite = new Favourite();
+            $new_favourite->fill($data);
+            $new_favourite->save();
+            $response["favourite"] = true;
+
+            $message = ($new_favourite) ? "Item have added in favourite list" : "Something went wrong";
+            if ($new_favourite) {
+                successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  $new_favourite->id, $message);
+                $admin_user_id = Admin::where('id', $admin_id)->value('user_id');
+                $item_name = Item::where('admin_id', $admin_id)->where('id', $item_id)->value('name');
+                SaveNotification::dispatch([
+                    'domain_id' => null, 'admin_id' => $admin_id, 'sender_id' => $user_id,
+                    'menu' => "favourites", 'menu_id' => $item_id, 'receiver_id' => $admin_user_id,
+                    'message' => sprintf(config('const.favourite.message'), $item_name),
+                    'link' => config('const.favourite.link'),
+                ]);
+            } else {
+                errorVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  null, $message);
+            }
+            return $this->responseAPI(true, $message, 200, $response);
+        } catch (\Exception $e) {
+            errorVisitorLog("Favourite", "Favourite-Save", "Favourite",  null, $e->getMessage());
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+    public function subscribeSave(Request $request)
+    {
+        try {
+            $response = [];
+
+            $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            if ($admin_id == null || $admin_id == "") {
+                $response['message'] = ["Error" => ["Admin Id Required"]];
+                successVisitorLog("Subscribe", "Subscribe-Save", "SubscribeAdminId",  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+
+            if ($request->email == null || $request->email == "") {
+                $response['message'] = ["Error" => ["Email Required"]];
+                successVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+            $email = $request->email;
+
+            $subscribe = Subscribe::where("admin_id", $admin_id)->where("email", $email)->first();
+            if ($subscribe) {
+                $response['subscribed'] = true;
+                successVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  $email, "Email Already have subscribed");
+                return $this->responseAPI(true, "Email Already have subscribed", 200, $response);
+            }
+
+            $data = ['admin_id' => $admin_id, 'email' => $email];
+
+            $new_subscribe = new Subscribe();
+            $new_subscribe->fill($data);
+            $new_subscribe->save();
+            $response['subscribed'] = false;
+
+            $message = ($new_subscribe) ? "Email successfully have subscribed" : "Something went wrong";
+            if ($new_subscribe) {
+                successVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  $new_subscribe->id, $message);
+            } else {
+                errorVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  null, $message);
+            }
+            return $this->responseAPI(true, $message, 200, $response);
+        } catch (\Exception $e) {
+            errorVisitorLog("Subscribe", "Subscribe-Save", "Subscribe",  null, $e->getMessage());
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+    public function favouriteList(Request $request)
+    {
+        try {
+            $search_word = $request->search_word;
+            $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
+
+            if (!$user_id || $user_id == null) {
+                $response['data'] = [];
+                $response['totalCount'] = 0;
+                return $this->responseAPI(true, "No Records Found", 200, $response);
+            }
+
+            $limit = $request->itemPerPage;
+            $offset = $request->offset;
+            $totalCount = 0;
+
+            $datas =
+                Favourite::select(
+                    "favourites.*",
+                    DB::raw('items.name as product_name'),
+                    DB::raw('items.id as product_id'),
+                    DB::raw('items.code as product_code'),
+                    DB::raw('item_images.path as image_path'),
+                    DB::raw('item_images.name as image_name')
+                )
+                ->join('items', function ($join) {
+                    $join->on('favourites.item_id', '=', 'items.id');
+                })
+                ->leftJoin('item_images', function ($join) {
+                    $join->on('item_images.item_id', '=', 'items.id')
+                        ->where('item_images.type', '=', "main");
+                })
+                ->when($search_word, function ($query, $search_word) {
+                    $query->where(function ($whr_query) use ($search_word) {
+                        $whr_query->where('favourites.name', 'like', '%' . $search_word . '%');
+                        //   ->orWhere('votes', '>', 50);
+                    });
+                })
+                ->where('items.deleted_at', null)
+                ->where('items.admin_id', $admin_id)
+                ->where('favourites.admin_id', $admin_id)
+                ->where('favourites.user_id', $user_id)
+                ->where('items.is_show', 1)
+                ->where('items.status', 1);
+
+            $totalCount = $datas->count();
+
+            $datas->limit($limit)->orderBy("favourites.id", "DESC");
+
+            if ($offset) {
+                $datas->offset($offset);
+            }
+
+            $favourites = $datas->get();
+
+            if (!empty($favourites)) {
+                foreach ($favourites as $key => $favourite) {
+                    $url = ($favourite->image_path != "" || $favourite->image_path != null) ? env('APP_URL') . Storage::url($favourite->image_path) : "";
+                    $favourite['item_image'] = [
+                        'url' => $url,
+                        'name' => $favourite->image_name
+                    ];
+                    $favourite->encrypt_id = encryptID($favourite->id, 'e');
+                    $favourite->product_encrypt_id = encryptID($favourite->product_id, 'e');
+                    unset($favourite->image_path);
+                    unset($favourite->image_name);
+                }
+            }
+
+            $response['data'] = $favourites;
+            $response['totalCount'] = $totalCount;
+
+
+            return $this->responseAPI(true, "Favourite list get successfully", 200, $response);
+        } catch (\Exception $e) {
+            return $this->responseAPI(false, $e->getMessage(), 200);
+        }
+    }
+
+
+    public function messageSave(Request $request)
+    {
+        try {
+            $response = [];
+
+            $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            if ($admin_id == null || $admin_id == "") {
+                $response['message'] = ["Error" => ["Admin Id Required"]];
+                successVisitorLog("Message", "Message-Save", "MessageAdminId",  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+
+            if ($request->email == null || $request->email == "") {
+                $response['message'] = ["Error" => ["Email Required"]];
+                successVisitorLog("Message", "Message-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
+                return $this->responseAPI(false, $response['message'], 200);
+            }
+            $email = $request->email;
+            $message = $request->message;
+
+            $data = ['admin_id' => $admin_id, 'email' => $email, 'message' => $message];
+
+            $data['code'] = Message::getCode();
+
+            $new_message = new Message();
+            $new_message->fill($data);
+            $new_message->save();
+
+            $website = Website::where("admin_id", $admin_id)->first();
+
+            $message = ($new_message) ? "Your message have successfully sent to " . $website->company_name : "Something went wrong";
+            if ($new_message) {
+                successVisitorLog("Message", "Message-Save", "Admin~id~" . $admin_id,  $new_message->id, $message);
+            } else {
+                errorVisitorLog("Message", "Message-Save", "Admin~id~" . $admin_id,  null, $message);
+            }
+            return $this->responseAPI(true, $message, 200, $response);
+        } catch (\Exception $e) {
+            errorVisitorLog("Message", "Message-Save", "Message",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }

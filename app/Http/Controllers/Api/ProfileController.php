@@ -6,10 +6,12 @@ use App\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\Worker;
+use App\Models\Enquiry;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Auth;
 use App\Services\FileService;
 use App\Http\Controllers\Api\UserController;
+use App\Models\Favourite;
 
 class ProfileController extends BaseController
 {
@@ -22,7 +24,7 @@ class ProfileController extends BaseController
         $this->fileservice = new FileService();
         $this->usercontroller = new UserController();
     }
-    
+
     public function profile()
     {
         try {
@@ -47,12 +49,17 @@ class ProfileController extends BaseController
                 $profile_encrypt_id = ($admin_id) ? encryptID($admin_id, 'e') : null;
             }
 
+            $enquiries = Enquiry::where('user_id', $user->id)->get();
+            $favourites = Favourite::where('user_id', $user->id)->get();
+
             $userInfo = [
                 'role' => $user->role->name,
                 'username' => $user->username,
                 'email' => $user->email,
                 'user_encrypt_id' => encryptID($user->id, 'e'),
-                'profile_encrypt_id' => $profile_encrypt_id
+                'profile_encrypt_id' => $profile_encrypt_id,
+                'enquiry_count' => $enquiries->count(),
+                'favourite_count' => $favourites->count(),
             ];
 
             $message = "Profile get successfully";

@@ -129,6 +129,15 @@ class TaskController extends BaseController
 
                     $task->encrypt_id = encryptID($task->id, 'e');
 
+                    if (($task->end_date &&
+                            (date("Y-m-d H:i:s") > date("Y-m-d H:i:s", strtotime($task->end_date))))
+                        && ($task->status == "Assigned"
+                            || $task->status == "Inprogress"
+                            || $task->status == "Restarted")
+                    ) {
+                        $task->overdue = "Overdue";
+                    }
+
                     unset($task->image_path);
                     unset($task->image_name);
 
@@ -303,25 +312,31 @@ class TaskController extends BaseController
                 $images = TaskImage::whereIn('id', $request->deleteImages)->get();
                 TaskImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($images, config('const.task'));
+                successLog("Task-worker", "update-image-delete", "TaskImage",  implode("~", $request->deleteImages), "Task image deleted from worker");
             }
 
             if (!empty($request->working_image)) {
                 $this->uploadImages($request->working_image, $task, "working");
+                successLog("Task-worker", "update-working-image-upload", "TaskImage",  $task->id, "Task image uploaded from worker");
             }
 
             if (!empty($request->completed_image)) {
                 $this->uploadImages($request->completed_image, $task, "completed");
+                successLog("Task-worker", "update-completed-image-upload", "TaskImage",  $task->id, "Task image uploaded from worker");
             }
 
             $this->updateTaskHistory($task->id, $request->comment, $request->status, $current_status);
 
             DB::commit();
+            successLog("Task-worker", "update", "Task",  $task->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Task-worker", "Update", "Task",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Task-worker", "Update", "Task",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }

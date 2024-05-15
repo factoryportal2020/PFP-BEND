@@ -43,3 +43,26 @@ function errorLog($menu, $action, $model = null, $id = null, $message = null)
         'path' => storage_path('logs' . env('ERROR_LOG_FOLDER') . env('ERROR_LOG_FILE_NAME'))
     ])->error($content);
 }
+
+
+//createlog("customer","add","Customer",1)
+function successVisitorLog($menu, $action, $model = null, $id = null, $message = null)
+{
+    $content = $menu . "-" . $model . "-" . $action . "-" . $id. "-" . $message;
+
+    Log::build([
+        'driver' => 'daily',
+        'path' => storage_path('logs' . env('SUCCESS_VISITOR_LOG_FOLDER') . env('SUCCESS_VISITOR_LOG_FILE_NAME'))
+    ])->info($content);
+}
+
+//createlog("customer","add","Customer",1,"something went wrong");
+function errorVisitorLog($menu, $action, $model = null, $id = null, $message = null)
+{
+    $content = $menu . "-" . $model . "-" . $action . "-" . $id . "-" . $message;
+    
+    Log::build([
+        'driver' => 'daily',
+        'path' => storage_path('logs' . env('ERROR_VISITOR_LOG_FOLDER') . env('ERROR_VISITOR_LOG_FILE_NAME'))
+    ])->error($content);
+}

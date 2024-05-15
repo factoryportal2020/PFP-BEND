@@ -36,6 +36,11 @@ class WorkerController extends BaseController
     public function list(Request $request)
     {
         try {
+
+            $auth = Auth::user();
+
+            $admin_id = $auth->admin->id;
+
             $search_word = $request->search_word;
             $city = $request->city;
 
@@ -45,6 +50,7 @@ class WorkerController extends BaseController
             $offset = $request->offset;
 
             $totalCount = 0;
+
 
             $datas =
                 Worker::select(
@@ -64,6 +70,7 @@ class WorkerController extends BaseController
                 ->when($city, function ($query, $city) {
                     $query->where("city", $city);
                 })
+                ->where('workers.admin_id', $admin_id)
                 ->when($specialist, function ($query, $specialist) {
                     $query->where("specialist", $specialist);
                 });
@@ -139,20 +146,25 @@ class WorkerController extends BaseController
                 if ($user->status() == 200) {
                     $worker->update(['user_id' => $user->getData()->id]);
                     $message = "Worker Datas and Login Details Saved Successfully";
+                    successLog("Worker", "Create", "User",  $user->getData()->id, $message);
                 }
             }
 
             if (!empty($request->profile_image)) {
                 $this->usercontroller->uploadWorkerImages($request->profile_image, $worker);
+                successLog("Worker", "create-UploadImage", "WorkerImage",  $worker->id, $message);
             }
 
             DB::commit();
+            successLog("Worker", "Create", "Worker",  $worker->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Worker", "Create", "Worker",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Worker", "Create", "Worker",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -196,12 +208,15 @@ class WorkerController extends BaseController
             $delete = $worker->delete();
             if ($delete) {
                 $message = "Worker data deleted successfully";
+                successLog("Worker", "Delete", "Worker",  $worker->id, $message);
                 return $this->responseAPI(true, $message, 200);
             } else {
                 $message = "Something went wrong";
+                errorLog("Worker", "Delete", "Worker",  $worker->id, $message);
                 return $this->responseAPI(false, $message, 200);
             }
         } catch (\Exception $e) {
+            errorLog("Worker", "Delete", "Worker",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }

@@ -128,10 +128,12 @@ class ItemController extends BaseController
 
             if (!empty($request->item_image)) {
                 $this->uploadImages($request->item_image, $item);
+                successLog("Item", "Create-item-UploadImage", "ItemImage",  $item->id, $message);
             }
 
             if (!empty($request->other_image)) {
                 $this->uploadImages($request->other_image, $item, "other");
+                successLog("Item", "Create-other-UploadImage", "ItemImage",  $item->id, $message);
             }
 
             $this->updateSpecifications($request->other_specifications, $request->delete_specifications_ids, $item->id);
@@ -140,12 +142,15 @@ class ItemController extends BaseController
 
 
             DB::commit();
+            successLog("Item", "Create", "Item",  $item->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Item", "Create", "Item",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Item", "Create", "Item",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -241,14 +246,17 @@ class ItemController extends BaseController
                 $item_images = ItemImage::whereIn('id', $request->deleteImages)->get();
                 ItemImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($item_images, config('const.item'));
+                successLog("Item", "update-image-delete", "ItemImage",  implode("~", $request->deleteImages), "Item image deleted");
             }
 
             if (!empty($request->item_image)) {
                 $this->uploadImages($request->item_image, $item);
+                successLog("Item", "update-itme-image-upload", "ItemImage",  $item->id, "Item image uploaded");
             }
 
             if (!empty($request->other_image)) {
                 $this->uploadImages($request->other_image, $item, "other");
+                successLog("Item", "update-other-image-upload", "ItemImage",  $item->id, "Item image uploaded");
             }
 
             $this->updateSpecifications($request->other_specifications, $request->delete_specifications_ids, $item->id);
@@ -256,12 +264,15 @@ class ItemController extends BaseController
             $this->updatePricebreakdowns($request->price_breakdowns, $request->delete_pricebreakdowns_ids, $item->id);
 
             DB::commit();
+            successLog("Item", "update", "Item",  $item->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Item", "Update", "Item",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Item", "Update", "Item",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -278,15 +289,19 @@ class ItemController extends BaseController
             $images = ItemImage::where('item_id', $id)->get();
             ItemImage::where('item_id', $id)->delete();
             $this->fileservice->remove_file_attachment($images);
+            $item = Item::where('admin_id', $admin_id)->findOrFail($id)->first();
             $delete = Item::where('admin_id', $admin_id)->findOrFail($id)->delete();
             if ($delete) {
                 $message = "Item data deleted successfully";
+                successLog("Item", "Delete", "Item",  $item->id, $message);
                 return $this->responseAPI(true, $message, 200);
             } else {
                 $message = "Something went wrong";
+                errorLog("Item", "Delete", "Item",  $item->id, $message);
                 return $this->responseAPI(false, $message, 200);
             }
         } catch (\Exception $e) {
+            errorLog("Item", "Delete", "Item",  $item->id, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -365,7 +380,7 @@ class ItemController extends BaseController
     public function getCategoryList($selectCondition)
     {
         $admin_id = Auth::user()->admin->id;
-        
+
         $datas = DB::table('categories')->selectRaw('id as value, name as label')
             ->when(($selectCondition == "wt"), function ($query) {
                 $query->where('deleted_at', null)

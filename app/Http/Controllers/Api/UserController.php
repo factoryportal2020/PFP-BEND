@@ -23,8 +23,9 @@ use App\Services\FileService;
 use App\Http\Requests\WorkerRequest;
 use App\Http\Requests\CustomerRequest;
 use App\Http\Requests\AdminRequest;
-
-
+use App\Models\Enquiry;
+use App\Models\Favourite;
+use App\Models\Subscribe;
 
 class UserController extends BaseController
 {
@@ -145,6 +146,20 @@ class UserController extends BaseController
             $response['customer'] = $customer;
             $response['profile_image']['profile_image'] = $images;
 
+            $enquiries = Enquiry::where('user_id', $customer->user_id)->get();
+            $favourites = Favourite::where('user_id', $customer->user_id)->get();
+            $subscribe = Subscribe::where('email', $user_data->email)->first();
+            $subscribed_email = "";
+            if ($subscribe) {
+                $subscribed_email = $subscribe->email;
+            }
+
+
+            $response['enquiries'] = ['enquiry_count' => $enquiries->count()];
+            $response['favourites'] = ['favourite_count' => $favourites->count()];
+            $response['subscribe'] = ['subscribed_email' => $subscribed_email];
+
+
             return $this->responseAPI(true, "Data get successfully", 200, $response);
         } catch (\Exception $e) {
             return $this->responseAPI(false, $e->getMessage(), 200);
@@ -198,6 +213,7 @@ class UserController extends BaseController
             $AdminRequest = new AdminRequest();
             $validator = Validator::make($request->all(), $AdminRequest->rules($request), $AdminRequest->messages());
             if ($validator->fails()) {
+                successLog("Admin", "update-validation", "Admin",  null, $validator->errors()->first());
                 $AdminRequest->failedValidation($validator);
             }
 
@@ -227,6 +243,7 @@ class UserController extends BaseController
 
             $message = "Admin Datas Updated Successfully";
 
+
             // User Login Creation
             if ($request->isPasswordChange) {
                 if ($request->username != "" && $request->password != "") {
@@ -234,6 +251,7 @@ class UserController extends BaseController
                     if ($user->status() == 200) {
                         $admin->update(['user_id' => $user->getData()->id]);
                         $message = "Admin Datas and Login Details Updated Successfully";
+                        successLog("Admin", "update-user-password-change", "User",  $user->getData()->id, $message);
                     }
                 }
             }
@@ -247,6 +265,7 @@ class UserController extends BaseController
                 $user = $this->createUser($request, true);
                 if ($user->status() == 200) {
                     $message = "Admin Datas and Login Details Saved Successfully";
+                    successLog("Admin", "update-user-login", "User",  $user->getData()->id, $message);
                 }
             }
 
@@ -254,19 +273,24 @@ class UserController extends BaseController
                 $images = AdminImage::whereIn('id', $request->deleteImages)->get();
                 AdminImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($images, config('const.admin'));
+                successLog("Admin", "update-image-delete", "AdminImage",  implode("~", $request->deleteImages), "Admin image deleted");
             }
 
             if (!empty($request->profile_image)) {
                 $this->uploadAdminImages($request->profile_image, $admin);
+                successLog("Admin", "update-image-upload", "AdminImage",  $admin->id, "Admin image uploaded");
             }
 
             DB::commit();
+            successLog("Admin", "update", "Admin",  $admin->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Admin", "Update", "Admin",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Admin", "Update", "Admin",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -279,6 +303,7 @@ class UserController extends BaseController
             $validator = Validator::make($request->all(), $CustomerRequest->rules($request), $CustomerRequest->messages());
             if ($validator->fails()) {
                 $CustomerRequest->failedValidation($validator);
+                successLog("Customer", "update-validation", "Customer",  null, $validator->errors()->first());
             }
 
             $encrypt_id = $request->encrypt_id;
@@ -318,6 +343,7 @@ class UserController extends BaseController
                     if ($user->status() == 200) {
                         $customer->update(['user_id' => $user->getData()->id]);
                         $message = "Customer Datas and Login Details Updated Successfully";
+                        successLog("Customer", "update-user-password-change", "User",  $user->getData()->id, $message);
                     }
                 }
             }
@@ -331,6 +357,7 @@ class UserController extends BaseController
                 $user = $this->createUser($request, true);
                 if ($user->status() == 200) {
                     $message = "Customer Datas and Login Details Saved Successfully";
+                    successLog("Customer", "update-user-login", "User",  $user->getData()->id, $message);
                 }
             }
 
@@ -338,19 +365,24 @@ class UserController extends BaseController
                 $images = CustomerImage::whereIn('id', $request->deleteImages)->get();
                 CustomerImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($images, config('const.customer'));
+                successLog("Customer", "update-image-delete", "CustomerImage",  implode("~", $request->deleteImages), "Customer image deleted");
             }
 
             if (!empty($request->profile_image)) {
                 $this->uploadCustomerImages($request->profile_image, $customer);
+                successLog("Customer", "update-image-upload", "CustomerImage",  $customer->id, "Customer image uploaded");
             }
 
             DB::commit();
+            successLog("Customer", "update", "Customer",  $customer->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Customer", "Update", "Customer",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Customer", "Update", "Customer",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
@@ -363,6 +395,7 @@ class UserController extends BaseController
             $validator = Validator::make($request->all(), $WorkerRequest->rules($request), $WorkerRequest->messages());
             if ($validator->fails()) {
                 $WorkerRequest->failedValidation($validator);
+                successLog("Worker", "update-validation", "Worker",  null, $validator->errors()->first());
             }
 
             $encrypt_id = $request->encrypt_id;
@@ -395,6 +428,7 @@ class UserController extends BaseController
                     if ($user->status() == 200) {
                         $worker->update(['user_id' => $user->getData()->id]);
                         $message = "Worker Datas and Login Details Updated Successfully";
+                        successLog("Worker", "update-user-password-change", "Worker",  $user->getData()->id, $message);
                     }
                 }
             }
@@ -408,6 +442,7 @@ class UserController extends BaseController
                 $user = $this->createUser($request, true); //update add true 
                 if ($user->status() == 200) {
                     $message = "Worker Datas and Login Details Saved Successfully";
+                    successLog("Worker", "update-user-login", "User",  $user->getData()->id, $message);
                 }
             }
 
@@ -415,19 +450,24 @@ class UserController extends BaseController
                 $images = WorkerImage::whereIn('id', $request->deleteImages)->get();
                 WorkerImage::whereIn('id', $request->deleteImages)->delete();
                 $this->fileservice->remove_file_attachment($images, config('const.worker'));
+                successLog("Worker", "update-image-delete", "WorkerImage",  implode("~", $request->deleteImages), "Worker image deleted");
             }
 
             if (!empty($request->profile_image)) {
                 $this->uploadWorkerImages($request->profile_image, $worker);
+                successLog("Worker", "update-image-upload", "WorkerImage",  $worker->id, "Worker image uploaded");
             }
 
             DB::commit();
+            successLog("Worker", "update", "Worker",  $worker->id, $message);
             return $this->responseAPI(true, $message, 200);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
+                errorLog("Worker", "Update", "Worker",  null, $e->getResponse());
                 return $e->getResponse();
             }
+            errorLog("Worker", "Update", "Worker",  null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
