@@ -36,7 +36,7 @@ class ItemController extends BaseController
         try {
             $search_word = $request->search_word;
             $category_id = $request->category_id;
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;
@@ -109,7 +109,7 @@ class ItemController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
             ]);
@@ -163,7 +163,7 @@ class ItemController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $response = [];
 
@@ -229,7 +229,7 @@ class ItemController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -284,7 +284,7 @@ class ItemController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $images = ItemImage::where('item_id', $id)->get();
             ItemImage::where('item_id', $id)->delete();
@@ -379,7 +379,7 @@ class ItemController extends BaseController
 
     public function getCategoryList($selectCondition)
     {
-        $admin_id = Auth::user()->admin->id;
+        $admin_id = Auth::user()->admin_id;
 
         $datas = DB::table('categories')->selectRaw('id as value, name as label')
             ->when(($selectCondition == "wt"), function ($query) {

@@ -35,7 +35,7 @@ class CategoryController extends BaseController
             $limit = $request->itemPerPage;
             $offset = $request->offset;
 
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $totalCount = 0;
 
@@ -97,7 +97,7 @@ class CategoryController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
             ]);
@@ -143,7 +143,7 @@ class CategoryController extends BaseController
             }
             $id = encryptID($encrypt_id, 'd');
 
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $response = [];
 
@@ -200,7 +200,7 @@ class CategoryController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -247,7 +247,7 @@ class CategoryController extends BaseController
                 return $this->responseAPI(false, "Invaid Data", 200);
             }
             $id = encryptID($encrypt_id, 'd');
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
             // $images = CategoryImage::where('category_id', $id)->get();
             // CategoryImage::where('category_id', $id)->delete();
             // $this->fileservice->remove_file_attachment($images);

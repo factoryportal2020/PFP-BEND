@@ -134,7 +134,7 @@ class AuthController extends BaseController
 
             return $this->responseAPI(true, $message, 200, $data);
         } catch (\Exception $e) {
-            errorLog("login", "Exception", "User", null, $message);
+            errorLog("login", "Exception", "User", null, $e->getMessage());
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
     }
