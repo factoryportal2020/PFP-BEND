@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Permission;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Session;
+use App\Models\Admin;
 
 class User extends Authenticatable
 {
@@ -59,16 +60,21 @@ class User extends Authenticatable
         return $this->belongsTo('App\Models\Role');
     }
 
-    public function admin()
-    {
-        return $this->hasOne('App\Models\Admin');
-    }
+    // public function admin()
+    // {
+    //     return $this->hasOne('App\Models\Admin');
+    // }
 
     public function domain()
     {
         return $this->belongsTo('App\Models\Role');
     }
 
+
+    public function getAdminIDAttribute($value)
+    {
+        return DB::table('admins')->where('user_id', $this->id)->value('id');
+    }
 
     public function getEncrptIDAttribute($value)
     {

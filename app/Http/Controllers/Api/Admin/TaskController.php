@@ -186,7 +186,7 @@ class TaskController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
             ]);
@@ -386,7 +386,7 @@ class TaskController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'updated_by' => $auth->id,
             ]);
 
@@ -599,7 +599,7 @@ class TaskController extends BaseController
     public function getCategoryList($selectCondition)
     {
         $auth = Auth::user();
-        $admin_id = $auth->admin->id;
+        $admin_id = $auth->admin_id;
         $datas = DB::table('categories')->selectRaw('id as value, name as label')
             ->when(($selectCondition == "wt"), function ($query, $encrypt_id) {
                 $query->where('deleted_at', null)
@@ -614,7 +614,7 @@ class TaskController extends BaseController
     {
         // wt = add, all = edit, list, view 
         $auth = Auth::user();
-        $admin_id = $auth->admin->id;
+        $admin_id = $auth->admin_id;
         $datas = DB::table('customers')
             ->selectRaw('id as value, 
                 CONCAT(`first_name`," ",`last_name`, " - ", `phone_no`) as label')
@@ -630,7 +630,7 @@ class TaskController extends BaseController
     public function getWorkerList($selectCondition)
     {
         $auth = Auth::user();
-        $admin_id = $auth->admin->id;
+        $admin_id = $auth->admin_id;
         $datas = DB::table('workers')->selectRaw('id as value,
         CONCAT(`first_name`," ",`last_name`,  " - ",`specialist`," - ", `phone_no`) as label')
             ->when(($selectCondition == "wt"), function ($query, $encrypt_id) {

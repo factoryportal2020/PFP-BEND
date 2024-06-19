@@ -33,7 +33,7 @@ class WebsiteRequest extends FormRequest
     {
         $auth = Auth::user();
 
-        $admin_id = $auth->admin->id;
+        $admin_id = $auth->admin_id;
 
         $website = Website::where('admin_id', $admin_id)->first();
         if(!$website){

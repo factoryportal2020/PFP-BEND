@@ -34,7 +34,7 @@ class CategoryRequest extends FormRequest
     {
         $id = ($request->encrypt_id) ? encryptID($request->encrypt_id, 'd') : null;
 
-        $admin_id = Auth::user()->admin->id;
+        $admin_id = Auth::user()->admin_id;
 
         $existName = DB::table('categories')->where('name', $request->name)->where('id', "!=", $id)->where('admin_id', "=", $admin_id)->first();
 

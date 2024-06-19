@@ -110,7 +110,7 @@ class CustomerController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => ($request->domain_id) ? $request->domain_id : $auth->domain_id,
-                'admin_id' => ($request->admin_id) ? $request->admin_id : $auth->admin->id,
+                'admin_id' => ($request->admin_id) ? $request->admin_id : $auth->admin_id,
                 'role_id' => Role::customer(),
                 'created_by' => ($request->created_by) ? $request->created_by : $auth->id,
                 'updated_by' => ($request->updated_by) ? $request->updated_by : $auth->id,

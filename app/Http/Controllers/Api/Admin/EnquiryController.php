@@ -20,7 +20,7 @@ class EnquiryController extends BaseController
     {
         try {
             $search_word = $request->search_word;
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
 
             $limit = $request->itemPerPage;
@@ -100,7 +100,7 @@ class EnquiryController extends BaseController
     {
         try {
             $search_word = $request->search_word;
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;
@@ -175,7 +175,7 @@ class EnquiryController extends BaseController
     {
         try {
             $search_word = $request->search_word;
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;
@@ -216,7 +216,7 @@ class EnquiryController extends BaseController
     {
         try {
             $search_word = $request->search_word;
-            $admin_id = Auth::user()->admin->id;
+            $admin_id = Auth::user()->admin_id;
 
             $limit = $request->itemPerPage;
             $offset = $request->offset;

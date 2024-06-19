@@ -313,7 +313,7 @@ class UserController extends BaseController
             }
             $auth = Auth::user();
 
-            $admin_id = ($request->header('Admin-EncryptId') != null || !$request->header('Admin-EncryptId')) ? encryptID($request->header('Admin-EncryptId'), 'd') : $auth->admin->id;
+            $admin_id = ($request->header('Admin-EncryptId') != null || $request->header('Admin-EncryptId')) ? encryptID($request->header('Admin-EncryptId'), 'd') : $auth->admin_id;
 
             $request->merge([
                 'domain_id' => $auth->domain_id,
@@ -407,7 +407,7 @@ class UserController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'role_id' => Role::worker(),
                 'updated_by' => $auth->id,
             ]);

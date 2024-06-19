@@ -37,7 +37,7 @@ class WebsiteController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
                 'launch_at' => null,
@@ -119,7 +119,7 @@ class WebsiteController extends BaseController
         try {
             $response = [];
             $auth = Auth::user();
-            $admin_id = $auth->admin->id;
+            $admin_id = $auth->admin_id;
             $website = Website::where("admin_id", $admin_id)->first();
             $website_encrypt_id = null;
             if ($website) {
@@ -271,7 +271,7 @@ class WebsiteController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'updated_by' => $auth->id,
                 'launch_at' => null,
             ]);
@@ -279,7 +279,7 @@ class WebsiteController extends BaseController
             $data = $request->all();
 
             DB::beginTransaction();
-            // Temp::where('admin_id', $auth->admin->id)->forceDelete();
+            // Temp::where('admin_id', $auth->admin_id)->forceDelete();
 
             $website = Temp::updateOrCreate(["id" => $id], $data);
 

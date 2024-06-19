@@ -39,7 +39,7 @@ class WorkerController extends BaseController
 
             $auth = Auth::user();
 
-            $admin_id = $auth->admin->id;
+            $admin_id = $auth->admin_id;
 
             $search_word = $request->search_word;
             $city = $request->city;
@@ -118,7 +118,7 @@ class WorkerController extends BaseController
             $auth = Auth::user();
             $request->merge([
                 'domain_id' => $auth->domain_id,
-                'admin_id' => $auth->admin->id,
+                'admin_id' => $auth->admin_id,
                 'role_id' => Role::worker(),
                 'created_by' => $auth->id,
                 'updated_by' => $auth->id,
