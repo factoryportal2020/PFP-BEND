@@ -77,7 +77,7 @@ class TaskRequest extends FormRequest
         return [
             'title' => 'required|max:100',
             'category_id' => 'required',
-            'worker_id' => 'required',
+            // 'worker_id' => 'required',
             'quantity' => 'required',
             'description' => 'max:1000',
             'task_image.*' => $image_mimes,
@@ -94,7 +94,7 @@ class TaskRequest extends FormRequest
         return [
             'title.required' => 'Task Title is required',
             'category_id.required' => 'Category is required',
-            'worker_id.required' => 'Worker is required',
+            // 'worker_id.required' => 'Worker is required',
             'quantity.required' => 'Quantity is required',
             'title.max' => 'Item name no longer than 100 characters',
             'description.max' => 'Description longer than 1000 characters',

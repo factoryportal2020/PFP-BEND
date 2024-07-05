@@ -76,11 +76,11 @@ class TaskController extends BaseController
                     DB::raw('customer_images.name as customer_image_name')
                 )
                 ->join('categories', 'categories.id', '=', 'tasks.category_id')
-                ->join('workers', 'workers.id', '=', 'tasks.worker_id')
                 ->leftJoin('task_images', function ($join) {
                     $join->on('task_images.task_id', '=', 'tasks.id')
                         ->where('task_images.type', '=', "main");
                 })
+                ->leftJoin('workers', 'workers.id', '=', 'tasks.worker_id')
                 ->leftJoin('worker_images', function ($join) {
                     $join->on('worker_images.worker_id', '=', 'workers.id');
                 })
@@ -172,7 +172,7 @@ class TaskController extends BaseController
             $response['totalCount'] = $totalCount;
 
 
-            return $this->responseAPI(true, $end_date, 200, $response);
+            return $this->responseAPI(true, "Data get successfully", 200, $response);
         } catch (\Exception $e) {
             return $this->responseAPI(false, $e->getMessage(), 200);
         }
