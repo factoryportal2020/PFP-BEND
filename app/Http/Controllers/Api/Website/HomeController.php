@@ -39,7 +39,9 @@ class HomeController extends BaseController
             if (!empty($website->logoImages)) {
                 foreach ($website->logoImages as $key => $image) {
                     $logoImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
                         'detail' => $image->detail
                     ];
                 }
@@ -49,7 +51,9 @@ class HomeController extends BaseController
             if (!empty($website->aboutImages)) {
                 foreach ($website->aboutImages as $key => $image) {
                     $aboutImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
                         'detail' => $image->detail
                     ];
                 }
@@ -66,8 +70,11 @@ class HomeController extends BaseController
             if (!empty($website->bannerImages)) {
                 foreach ($website->bannerImages as $key => $image) {
                     $bannerImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
-                        'title' => $image->title, 'caption' => $image->caption,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
+                        'title' => $image->title,
+                        'caption' => $image->caption,
                     ];
                 }
             }
@@ -116,7 +123,9 @@ class HomeController extends BaseController
             if (!empty($website->logoImages)) {
                 foreach ($website->logoImages as $key => $image) {
                     $logoImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
                         'detail' => $image->detail
                     ];
                 }
@@ -149,8 +158,11 @@ class HomeController extends BaseController
             if (!empty($website->bannerImages)) {
                 foreach ($website->bannerImages as $key => $image) {
                     $bannerImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
-                        'title' => $image->title, 'caption' => $image->caption,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
+                        'title' => $image->title,
+                        'caption' => $image->caption,
                     ];
                 }
             }
@@ -193,8 +205,11 @@ class HomeController extends BaseController
             if (!empty($website->aboutImages)) {
                 foreach ($website->aboutImages as $key => $image) {
                     $aboutImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
-                        'detail' => $image->detail, 'caption' => $image->caption,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
+                        'detail' => $image->detail,
+                        'caption' => $image->caption,
                     ];
                 }
             }
@@ -203,8 +218,11 @@ class HomeController extends BaseController
             if (!empty($website->bannerImages)) {
                 foreach ($website->bannerImages as $key => $image) {
                     $bannerImages[] = [
-                        'url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id,
-                        'title' => $image->title, 'caption' => $image->caption,
+                        'url' => env('APP_URL') . Storage::url($image->path),
+                        'name' => $image->name,
+                        'id' => $image->id,
+                        'title' => $image->title,
+                        'caption' => $image->caption,
                     ];
                 }
             }
@@ -237,7 +255,7 @@ class HomeController extends BaseController
 
         $search_word = $request->search_word;
 
-        $limit = $request->itemPerPage;
+        $limit = ($request->itemPerPage) ? $request->itemPerPage : "";
         $offset = $request->offset;
 
         $totalCount = 0;
@@ -260,8 +278,9 @@ class HomeController extends BaseController
 
         $totalCount = $datas->count();
 
-        $datas->limit($limit)->orderBy("categories.id", "DESC");
-
+        if ($limit != "") {
+            $datas->limit($limit)->orderBy("categories.id", "DESC");
+        }
         if ($offset) {
             $datas->offset($offset);
         }
@@ -296,6 +315,8 @@ class HomeController extends BaseController
             $search_word = $request->search_word;
             // $category_id = $request->category_id;
             $category_code = $request->category_code;
+            $categoriesFilter = $request->categoriesFilter;
+            $categoriesFilterTrig = (!empty($categoriesFilter)) ? true : false;
             $category_not_all = ($category_code != "*") ? 1 : 0;
             // $admin_id = $request->admin_id;
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
@@ -328,6 +349,11 @@ class HomeController extends BaseController
                 ->when($category_code, function ($query, $category_code) {
                     $query->where("categories.code", $category_code);
                 })
+
+                ->when($categoriesFilterTrig, function ($query) use ($categoriesFilter) {
+                    $query->whereIn("categories.id", $categoriesFilter);
+                })
+
                 ->where('items.deleted_at', null)
                 ->where('categories.admin_id', $admin_id)
                 ->where('items.admin_id', $admin_id)
@@ -541,6 +567,18 @@ class HomeController extends BaseController
             $message = ($new_enquiry) ? "Item have enquired" : "Something went wrong";
             if ($new_enquiry) {
                 successVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  $new_enquiry->id, $message);
+                $admin_user_id = Admin::where('id', $admin_id)->value('user_id');
+                $item_name = Item::where('admin_id', $admin_id)->where('id', $item_id)->value('name');
+                SaveNotification::dispatch([
+                    'domain_id' => null,
+                    'admin_id' => $admin_id,
+                    'sender_id' => $user_id,
+                    'menu' => "enquiries",
+                    'menu_id' => null,
+                    'receiver_id' => $admin_user_id,
+                    'message' => sprintf(config('const.enquiry.message'), $item_name),
+                    'link' => config('const.enquiry.link'),
+                ]);
             } else {
                 errorVisitorLog("Enquiry", "Enquiry-Save", "Admin~id~" . $admin_id,  null, $message);
             }
@@ -637,6 +675,8 @@ class HomeController extends BaseController
         try {
             $response = [];
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $item_id = encryptID($request->currentEncryptID, 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
             if ($admin_id == null || $admin_id == "") {
                 $response['message'] = ["Error" => ["Admin Id Required"]];
                 successVisitorLog("Favourite", "Favourite-Save", "FavouriteAdminId",  null, $response['message']['Error'][0]);
@@ -647,8 +687,7 @@ class HomeController extends BaseController
                 successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  null, "Product Id Required");
                 return $this->responseAPI(false, "Product Id Required", 200);
             }
-            $item_id = encryptID($request->currentEncryptID, 'd');
-            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
+
             if ($user_id == null || $user_id == "") {
                 $response['message'] = ["Error" => ["User Login Required"]];
                 successVisitorLog("Favourite", "Favourite-Save", "Admin~id~" . $admin_id,  null, $response['message']['Error'][0]);
@@ -680,8 +719,12 @@ class HomeController extends BaseController
                 $admin_user_id = Admin::where('id', $admin_id)->value('user_id');
                 $item_name = Item::where('admin_id', $admin_id)->where('id', $item_id)->value('name');
                 SaveNotification::dispatch([
-                    'domain_id' => null, 'admin_id' => $admin_id, 'sender_id' => $user_id,
-                    'menu' => "favourites", 'menu_id' => $item_id, 'receiver_id' => $admin_user_id,
+                    'domain_id' => null,
+                    'admin_id' => $admin_id,
+                    'sender_id' => $user_id,
+                    'menu' => "favourites",
+                    'menu_id' => $item_id,
+                    'receiver_id' => $admin_user_id,
                     'message' => sprintf(config('const.favourite.message'), $item_name),
                     'link' => config('const.favourite.link'),
                 ]);
@@ -701,6 +744,7 @@ class HomeController extends BaseController
             $response = [];
 
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
             if ($admin_id == null || $admin_id == "") {
                 $response['message'] = ["Error" => ["Admin Id Required"]];
                 successVisitorLog("Subscribe", "Subscribe-Save", "SubscribeAdminId",  null, $response['message']['Error'][0]);
@@ -731,6 +775,17 @@ class HomeController extends BaseController
             $message = ($new_subscribe) ? "Email successfully have subscribed" : "Something went wrong";
             if ($new_subscribe) {
                 successVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  $new_subscribe->id, $message);
+                $admin_user_id = Admin::where('id', $admin_id)->value('user_id');
+                SaveNotification::dispatch([
+                    'domain_id' => null,
+                    'admin_id' => $admin_id,
+                    'sender_id' => $user_id,
+                    'menu' => "subscribes",
+                    'menu_id' => null,
+                    'receiver_id' => $admin_user_id,
+                    'message' => sprintf(config('const.subscribe.message'), $email),
+                    'link' => config('const.subscribe.link'),
+                ]);
             } else {
                 errorVisitorLog("Subscribe", "Subscribe-Save", "Admin~id~" . $admin_id,  null, $message);
             }
@@ -828,6 +883,7 @@ class HomeController extends BaseController
             $response = [];
 
             $admin_id = encryptID($request->header('Admin-EncryptId'), 'd');
+            $user_id = ($request->userEncryptID) ? encryptID($request->userEncryptID, 'd') : null;
             if ($admin_id == null || $admin_id == "") {
                 $response['message'] = ["Error" => ["Admin Id Required"]];
                 successVisitorLog("Message", "Message-Save", "MessageAdminId",  null, $response['message']['Error'][0]);
@@ -855,6 +911,17 @@ class HomeController extends BaseController
             $message = ($new_message) ? "Your message have successfully sent to " . $website->company_name : "Something went wrong";
             if ($new_message) {
                 successVisitorLog("Message", "Message-Save", "Admin~id~" . $admin_id,  $new_message->id, $message);
+                $admin_user_id = Admin::where('id', $admin_id)->value('user_id');
+                SaveNotification::dispatch([
+                    'domain_id' => null,
+                    'admin_id' => $admin_id,
+                    'sender_id' => $user_id,
+                    'menu' => "messages",
+                    'menu_id' => null,
+                    'receiver_id' => $admin_user_id,
+                    'message' => sprintf(config('const.message.message'), $email),
+                    'link' => config('const.message.link'),
+                ]);
             } else {
                 errorVisitorLog("Message", "Message-Save", "Admin~id~" . $admin_id,  null, $message);
             }

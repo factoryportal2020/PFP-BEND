@@ -281,9 +281,17 @@ class UserController extends BaseController
                 successLog("Admin", "update-image-upload", "AdminImage",  $admin->id, "Admin image uploaded");
             }
 
+            if (!empty($admin->adminImages)) {
+                foreach ($admin->adminImages as $key => $image) {
+                    $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                }
+            }
+            $response = ['profile_image' => $images];
+
+
             DB::commit();
             successLog("Admin", "update", "Admin",  $admin->id, $message);
-            return $this->responseAPI(true, $message, 200);
+            return $this->responseAPI(true, $message, 200, $response);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
@@ -373,9 +381,16 @@ class UserController extends BaseController
                 successLog("Customer", "update-image-upload", "CustomerImage",  $customer->id, "Customer image uploaded");
             }
 
+            if (!empty($customer->customerImages)) {
+                foreach ($customer->customerImages as $key => $image) {
+                    $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                }
+            }
+            $response = ['profile_image' => $images];
+
             DB::commit();
             successLog("Customer", "update", "Customer",  $customer->id, $message);
-            return $this->responseAPI(true, $message, 200);
+            return $this->responseAPI(true, $message, 200, $response);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
@@ -458,9 +473,16 @@ class UserController extends BaseController
                 successLog("Worker", "update-image-upload", "WorkerImage",  $worker->id, "Worker image uploaded");
             }
 
+            if (!empty($worker->workerImages)) {
+                foreach ($worker->workerImages as $key => $image) {
+                    $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                }
+            }
+            $response = ['profile_image' => $images];
+
             DB::commit();
             successLog("Worker", "update", "Worker",  $worker->id, $message);
-            return $this->responseAPI(true, $message, 200);
+            return $this->responseAPI(true, $message, 200, $response);
         } catch (\Exception $e) {
             DB::rollBack();
             if ($e instanceof HttpResponseException) {
