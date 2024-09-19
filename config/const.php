@@ -17,8 +17,8 @@ return [
     // Website Message to admin
     'favourite' => ['link' => 'favourite/list', 'message' => "%s product added to favourite list"],
     'subscribe' => ['link' => 'subscribe/list', 'message' => "%s - subscriber added"],
-    'enquiry' => ['link' => 'enquiry/list', 'message' => "Product %s received enquiry"],
-    'message' => ['link' => 'message/list', 'message' => "Received Message from Customer"],
+    'enquiry' => ['link' => 'enquiry/list', 'message' => "Received enquiry for product - %s"],
+    'message' => ['link' => 'message/list', 'message' => "Received Message from %s"],
 
     // From Admin to worker
     'taskAssinged' => ['link' => 'task/%s', 'message' => "Task %s assigned to you"],

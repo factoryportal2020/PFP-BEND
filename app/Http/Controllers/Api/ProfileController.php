@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Services\FileService;
 use App\Http\Controllers\Api\UserController;
 use App\Models\Favourite;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends BaseController
 {
@@ -38,15 +39,35 @@ class ProfileController extends BaseController
 
             $profile_encrypt_id = null;
 
+            $images = [];
             if ($role == "customer") {
-                $customer_id = Customer::where('user_id', $user->id)->value('id');
+                $customer = Customer::where('user_id', $user->id)->first();
+                $customer_id = $customer->id;
                 $profile_encrypt_id = ($customer_id) ? encryptID($customer_id, 'e') : null;
+
+                if (!empty($customer->customerImages)) {
+                    foreach ($customer->customerImages as $key => $image) {
+                        $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                    }
+                }
             } elseif ($role == "worker") {
-                $worker_id = Worker::where('user_id', $user->id)->value('id');
+                $worker = Worker::where('user_id', $user->id)->first();
+                $worker_id = $worker->id;
                 $profile_encrypt_id = ($worker_id) ? encryptID($worker_id, 'e') : null;
+                if (!empty($worker->workerImages)) {
+                    foreach ($worker->workerImages as $key => $image) {
+                        $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                    }
+                }
             } elseif ($role == "admin") {
-                $admin_id = Admin::where('user_id', $user->id)->value('id');
+                $admin = Admin::where('user_id', $user->id)->first();
+                $admin_id = $admin->id;
                 $profile_encrypt_id = ($admin_id) ? encryptID($admin_id, 'e') : null;
+                if (!empty($admin->adminImages)) {
+                    foreach ($admin->adminImages as $key => $image) {
+                        $images[] = ['url' => env('APP_URL') . Storage::url($image->path), 'name' => $image->name, 'id' => $image->id];
+                    }
+                }
             }
 
             $enquiries = Enquiry::where('user_id', $user->id)->get();
@@ -60,6 +81,7 @@ class ProfileController extends BaseController
                 'profile_encrypt_id' => $profile_encrypt_id,
                 'enquiry_count' => $enquiries->count(),
                 'favourite_count' => $favourites->count(),
+                'profile_image' => $images
             ];
 
             $message = "Profile get successfully";

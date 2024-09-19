@@ -317,7 +317,7 @@ class DashboardController extends BaseController
             } else {
             }
 
-            $admin_id = $user->admin->id;
+            $admin_id = $user->admin_id;
 
             $data = Notification::where('admin_id', $admin_id)
                 ->where('receiver_id', $user->id)->where('is_viewed', 0);
